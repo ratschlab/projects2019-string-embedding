@@ -127,6 +127,25 @@ def knn_search(index, indices, num_neighbours, verbose = True):
     
     return NN, NN_dist
 
+def knn_search_value(index, search_values, build_index, num_neighbours, verbose = True):
+    if verbose:
+        my_print('nearest neighbours search:') 
+    t0 = time.time()
+    
+    total_len = search_values.shape[0]
+
+    NN = []
+    NN_dist = []
+    for ki in tqdm(range(total_len)):
+        nn,dist = index.get_nns_by_vector(search_values[ki,:], num_neighbours, include_distances=True)
+        NN.append(build_index[nn])
+        NN_dist.append(dist)
+        
+    if verbose:
+        my_print('time search = '+str(time.time()-t0)) 
+    
+    return NN, NN_dist
+
 
 def list_kmers(seqs, vals = [],  k = 10,  to_sort = False, addx = True, addy = False, unique = False,  print_kmers = False):
     kmers = []
