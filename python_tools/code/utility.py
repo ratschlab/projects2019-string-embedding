@@ -96,11 +96,13 @@ def build_index(matrix, indices, num_trees, metric = 'euclidean', verbose = True
     for i in range(total_len):
         index.add_item(i, matrix[indices[i],:])
     index.build(num_trees) 
+    index.save('temp.ann')
+    index2 = AnnoyIndex(proj_dim, metric= metric)  # Length of item vector that will be indexed
+    index2.load('temp.ann')
+    print('index.number of items = ', index2.get_n_items())
     
     if verbose:
         my_print('time to build '+str(num_trees)+' trees = '+str(time.time()-t0)) 
-        
-    
     
     return index
 
@@ -121,25 +123,28 @@ def knn_search(index, indices, num_neighbours, verbose = True):
         nn,dist = index.get_nns_by_item(ki, num_neighbours, include_distances=True)
         NN.append(nn)
         NN_dist.append(dist)
+    NN = np.array(NN)
+    NN_dist = np.array(NN_dist)
         
     if verbose:
         my_print('time search = '+str(time.time()-t0)) 
     
     return NN, NN_dist
 
-def knn_search_value(index, search_values, build_index, num_neighbours, verbose = True):
+def knn_search_value(index, matrix, search_indices, build_indices, num_neighbours, verbose = True):
     if verbose:
         my_print('nearest neighbours search:') 
     t0 = time.time()
     
-    total_len = search_values.shape[0]
+    total_len = len(search_indices)
 
-    NN = []
-    NN_dist = []
+    NN = np.zeros(shape=(total_len,num_neighbours), dtype = np.int64)
+    NN_dist = np.zeros(shape=(total_len,num_neighbours), dtype=np.float64)
     for ki in tqdm(range(total_len)):
-        nn,dist = index.get_nns_by_vector(search_values[ki,:], num_neighbours, include_distances=True)
-        NN.append(build_index[nn])
-        NN_dist.append(dist)
+        si = search_indices[ki]
+        nn,nn_dist = index.get_nns_by_vector(matrix[si,:], num_neighbours, include_distances=True)
+        NN[ki,:] = build_indices[nn]
+        NN_dist[ki,:] = nn_dist
         
     if verbose:
         my_print('time search = '+str(time.time()-t0)) 
