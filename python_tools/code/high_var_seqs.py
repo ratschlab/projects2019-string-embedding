@@ -125,7 +125,8 @@ def high_var_seq2(num_genes, padding, gene_len, num_seq, mutation_rate, repeat,
 
 
 
-# sample command line runs : python high_var_seqs.py  --mutation-rate .1  --geometric-p .4 --num-seq 2 --num-seq2 5  --gene-len 100 --gene-len2 400 -G 50 --repeat 3 --padding 1000 --save-directory ../data/seqs7
+# sample command line runs : 
+# python high_var_seqs.py  --mutation-rate .1  --geometric-p .4 --num-seq 2 --num-seq2 5  --gene-len 100 --gene-len2 400 -G 50 --repeat 3 --padding 1000 --save-directory ../data/seqs7
 
 if __name__ == '__main__':
     # reading the arguments

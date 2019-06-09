@@ -18,9 +18,10 @@ def load_files(file_name, clean):
     result_path = HOME + '/results/' + file_name 
     index_path = result_path + '/index/'
     search_path = result_path + '/search/'
+    eval_path = result_path + '/eval/'
     npz_path = result_path + '/npz/'
 
-    paths = (index_path, search_path, npz_path)
+    paths = (index_path, search_path, npz_path, eval_path)
 
     if clean==True:
         if os.path.exists(result_path):
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     elif options.target=='build':
     
         seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        index_path, search_path, npz_path = paths
+        index_path, search_path, npz_path , eval_path= paths
         
 
 
@@ -96,6 +97,7 @@ if __name__ == '__main__':
         np.savez(npz_path+'data'+str(sid)+'.npz', 
                  convolved=convolved, 
                  kmers = kmers, 
+                 kmer_pos = kmer_pos,
                  kmer_vals = kmer_vals, 
                  build_indices = build_indices)
 
@@ -108,14 +110,60 @@ if __name__ == '__main__':
 
     elif options.target=='search':
         seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        index_path, search_path, npz_path = paths
+        index_path, search_path, npz_path , eval_path= paths
+
+        data1 = np.load(npz_path+'data'+str(sid)+'.npz')
+        knn_index = AnnoyIndex(proj_dim, metric)
+        knn_index.load(index_path + str(sid) + '.ann', prefault=True)
+        build_indices = data1['build_indices']
+
+        data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
+        convolved = data2['convolved']
+        search_indices = np.arange(0,convolved.shape[0],step_search)
+        NN, NN_dist = utility.knn_search_value(knn_index, convolved, search_indices, build_indices,num_neighbours)
+        np.savez(search_path + str(sid)+'_'+str(sid2) + '.npz', NN=NN, NN_dist=NN_dist, search_indices = search_indices)
+        np.savez(search_path+str(sid)+'_'+str(sid2)+'.done', sid=sid)
+
+    elif options.target=='eval':
+        seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
+        index_path, search_path, npz_path , eval_path= paths
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
-        knn_index = AnnoyIndex(proj_dim, metric)
-        knn_index.load(index_path + str(sid) + '.ann')
-        convolved = data2['convolved']
-        search_indices = np.arange(0,convolved.shape[0],step_search)
-        NN, NN_dist = utility.knn_search_value(knn_index, convolved, search_indices, num_neighbours)
-        np.savez(search_path + str(sid)+'_'+str(sid2) + '.npz', NN=NN, NN_dist=NN_dist, search_indices = search_indices)
+        kvals1 = data1['kmer_vals']
+        kvals2 = data2['kmer_vals']
+        search_data = np.load(search_path + str(sid)+'_'+str(sid2) + '.npz')
+        convolved = data1['convolved']
+        convolved2 = data2['convolved']
+        NN = search_data['NN']
+        NN_dist = search_data['NN_dist']
+        search_indices = search_data['search_indices']
+        build_indices = data1['build_indices']
+        print('len search indices = ', len(search_indices))
+        print('NN.shape[0] = ', NN.shape[0])
+
+
+        total_len = len(search_indices)
+        total_count = 0
+        total_correct = 0
+        quadrupples = []
+        for kii in tqdm(range(total_len)):
+            ki = search_indices[kii]
+            kval2 = kvals2[ki]
+            neighbor_indices = NN[kii]
+            for ki2 in neighbor_indices:
+                kval1 = kvals1[ki2]
+                total_count = total_count + 1
+                if kval2==2:
+                    Kmer = seqs[sid][ki2:ki2+k_big]
+                    Kmer2 = seqs[sid2][ki:ki+k_big]
+                    print('kmer  = ', Kmer)
+                    print('kmer2 = ', Kmer2)
+                    print('conv, conv2 = ', convolved2[ki], ', ', convolved[ki2])
+                if kval1==kval2 and kval1>0:
+                    total_correct = total_correct + 1
+                    quadrupples.append( ( (sid,sid2) , (kval1, kval2) ) )
+        quadrupples = set(quadrupples)
+        print('false positive = ', (total_count - total_correct)/total_count)
+        print('recall = ', len(quadrupples)*1.0/Op.num_genes)
 

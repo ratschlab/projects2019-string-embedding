@@ -81,25 +81,21 @@ def random_projection(skmers, k_big, proj_dim):
 
     convolved = np.zeros(shape = projection.shape, dtype = np.int32)
     for di in tqdm(range(proj_dim)):
-    #     print('convolving dim', di/proj_dim)
         convolved[:,di] = np.convolve(projection[:,di],np.ones(k_big), mode='same')
 
     return convolved
 
-def build_index(matrix, indices, num_trees, metric = 'euclidean', verbose = True):
+def build_index(matrix, indices, num_trees, metric, index_path, verbose = True):
     total_len = len(indices)
     proj_dim = matrix.shape[1]
     # compute neighbors using annoy
     t0 = time.time()
 
     index = AnnoyIndex(proj_dim, metric= metric)  # Length of item vector that will be indexed
+    index.on_disk_build(index_path) 
     for i in range(total_len):
         index.add_item(i, matrix[indices[i],:])
-    index.build(num_trees) 
-    index.save('temp.ann')
-    index2 = AnnoyIndex(proj_dim, metric= metric)  # Length of item vector that will be indexed
-    index2.load('temp.ann')
-    print('index.number of items = ', index2.get_n_items())
+    index.build(num_trees)
     
     if verbose:
         my_print('time to build '+str(num_trees)+' trees = '+str(time.time()-t0)) 
