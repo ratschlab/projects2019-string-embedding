@@ -2,8 +2,7 @@ import utility
 import numpy as np
 from importlib import reload
 reload(utility)
-import sys, os, shutil
-import time
+import sys, os, shutil, time
 from tqdm import tqdm
 import matplotlib.pyplot as pl
 from optparse import OptionParser
@@ -14,21 +13,21 @@ HOME = '/cluster/work/grlab/share/databases/genomes/synthetic'
 
 def load_paths(file_name):
     data_path = HOME + '/data/' + file_name + '.npz'
-    result_path = HOME + '/results/' + file_name 
-    index_path = result_path + '/index/'
-    search_path = result_path + '/search/'
-    eval_path = result_path + '/eval/'
-    npz_path = result_path + '/npz/'
+    result_path = HOME + '/results/' + file_name +'/'  
+    index_path = result_path + 'index/'
+    search_path = result_path + 'search/'
+    eval_path = result_path + 'eval/'
+    npz_path = result_path + 'npz/'
 
     return result_path, index_path, search_path, eval_path, npz_path
 
 def load_files(file_name, clean):
     data_path = HOME + '/data/' + file_name + '.npz'
-    result_path = HOME + '/results/' + file_name 
-    index_path = result_path + '/index/'
-    search_path = result_path + '/search/'
-    eval_path = result_path + '/eval/'
-    npz_path = result_path + '/npz/'
+    result_path = HOME + '/results/' + file_name + '/' 
+    index_path = result_path + 'index/'
+    search_path = result_path + 'search/'
+    eval_path = result_path + 'eval/'
+    npz_path = result_path + 'npz/'
 
     paths = (index_path, search_path, npz_path, eval_path)
 
@@ -79,23 +78,29 @@ def crawl_dep_recurse(Map, Set, curr):
         Set.add(curr)
         if curr in Map.keys():
             for job in Map[curr]:
-                crawl_dep(Map, Set, job)
+                crawl_dep_recurse(Map, Set, job)
 
 def crawl_dep(Map, curr):
     Set = set()
     crawl_dep_recurse(Map, Set,curr)
-    return list(Set)
+    #return list(Set)
+    return Set
 
 
 def run_jobs(jobs_flat, job_dep, command, job_paths):
-    for job in jobs_flat:
-        jp = get_job_path(job,job_paths)
-        if not os.exists(jp):
-            deps_satisfied = [os.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
-            if all(deps_satisfied):
-                cmd_combo = 'eval " ' + command + get_job_cmd(job) + '; echo dummy > ' + jp + ' " ' 
-                print('running command: '+ cmd_combo)
-                os.system(cmd_combo)
+    all_done = False
+    while not all_done:
+        all_done = True
+        for job in jobs_flat:
+            jp = get_job_path(job,job_paths)
+            if not os.path.exists(jp):
+                all_done = False
+                deps_satisfied = [os.path.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
+                if all(deps_satisfied):
+                    cmd_combo = 'eval " ' + command + get_job_cmd(job) + '; echo dummy > ' + jp + ' " ' 
+                    print('running command: '+ cmd_combo)
+                    os.system(cmd_combo)
+        time.sleep(1)
 
 
 
@@ -134,13 +139,13 @@ if __name__ == '__main__':
         summary = np.load(result_path+'num.npz')
         N = summary['N']
         jobs_dep = dict()
-        add_job(jobs_dep,('clean'),[])
+        add_job(jobs_dep,('clean',),[])
         build_jobs = []
         for i in range(N):
             job = ('build',i) 
-            add_job(jobs_dep,job,[('clean')])
+            add_job(jobs_dep,job,[('clean',)])
             build_jobs.append(job)
-        searh_jobs = []
+        search_jobs = []
         for i in range(N):
             for j in range(N):
                 if i!=j:
@@ -154,28 +159,30 @@ if __name__ == '__main__':
                     job = ('eval',i,j)
                     add_job( jobs_dep, job, [ ('search',i,j) ]  )
                     eval_jobs.append(job)
-        add_job(jobs_dep, ('merge'), eval_jobs)
+        add_job(jobs_dep, ('merge',), eval_jobs)
 
         job_paths = {'clean':result_path, 
                 'build': index_path,
                 'search' : search_path,
                 'eval': eval_path,
-                'merge': result_path }
-        dep_job = {'clean':[], 
-                'build': [('clean')],
-                'search' : build_jobs,
-                'eval': search_jobs,
-                'merge': eval_jobs }
-        add_job(jobs_dep,('empty'), dep_job[optioins.forward_target]) 
-        jobs_flat = crawl_dep(jobs_dep)
-        command = 'bsub -R "rmemusage[' + str(options.memory) + '000]"  python bk_worker_main.py '
+                'merge': result_path ,
+                'final': result_path }
+        dep_job = {'final':[], 
+                'clean': [('clean',)],
+                'build' : build_jobs,
+                'search': search_jobs,
+                'eval': eval_jobs, 
+                'merge': [('merge',)] }
+        add_job(jobs_dep,('final',), dep_job[options.forward_target]) 
+        jobs_flat = crawl_dep(jobs_dep, ('final',))
+        command = 'bsub -R "rusage[mem=' + str(options.memory) + '000]"  python bk_worker_main.py '
 
         for k,v in options.__dict__.items():
             if k not in ['target', 'seq_id', 'search_seq_id', 'target', 'forward_target']:
                 command = command + '--' + k.replace('_','-') + ' ' + str(v) 
         run_jobs(jobs_flat, jobs_dep, command, job_paths) 
 
-    elif options.target=='empty':
+    elif options.target=='final':
         pass
         
     elif options.target=='merge':
@@ -186,7 +193,7 @@ if __name__ == '__main__':
         load_files(options.file_name, clean=True)
         result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
         seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options)
+        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op)
 
     elif options.target=='build':
     
@@ -212,11 +219,8 @@ if __name__ == '__main__':
                                         num_trees = num_trees, 
                                         metric = metric, 
                                         index_path = index_path + str(sid) + '.ann')
-        np.savez(index_path+str(sid)+'.done', sid=sid)
 
     elif options.target=='search':
-        #seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        #index_path, search_path, npz_path , eval_path= paths
         result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
@@ -229,16 +233,15 @@ if __name__ == '__main__':
         search_indices = np.arange(0,convolved.shape[0],step_search)
         NN, NN_dist = utility.knn_search_value(knn_index, convolved, search_indices, build_indices,num_neighbors)
         np.savez(search_path + str(sid)+'_'+str(sid2) + '.npz', NN=NN, NN_dist=NN_dist, search_indices = search_indices)
-        #np.savez(search_path+str(sid)+'_'+str(sid2)+'.done', sid=sid)
-        print('done',file=open(search_path +str(sid)+'_'+str(sid2)+'.done','w+'))
 
     elif options.target=='eval':
-        #seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        #index_path, search_path, npz_path , eval_path= paths
         result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
+        summary = np.load(result_path + 'num.npz')
+        Op = summary['Op']
+        Op = Op[()]
         num_seqs = data1['num_seqs']
         kvals1 = data1['kmer_vals']
         kvals2 = data2['kmer_vals']
@@ -250,6 +253,7 @@ if __name__ == '__main__':
 
         total_len = len(search_indices)
         total_count = 0
+        #index_path, search_path, npz_path , eval_path= paths
         total_correct = 0
         quadrupples = []
         for kii in tqdm(range(total_len)):
@@ -269,8 +273,7 @@ if __name__ == '__main__':
                 total_count = total_count, 
                 total_correct = total_correct)
         np.savez(eval_path +str(sid)+'_'+str(sid2)+'.done', sid=sid)
-        print('done',file=open(eval_path +str(sid)+'_'+str(sid2)+'.done','w+'))
 
         print('false positive = ', (total_count - total_correct)/total_count)
-        print('recall = ', len(quadrupples)*1.0/num_genes)
+        print('recall = ', len(quadrupples)*1.0/Op.num_genes)
 
