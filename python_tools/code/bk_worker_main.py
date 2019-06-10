@@ -18,16 +18,10 @@ def load_paths(file_name):
     eval_path = result_path + 'eval/'
     npz_path = result_path + 'npz/'
 
-    return result_path, index_path, search_path, eval_path, npz_path
+    return data_path, result_path, index_path, search_path, eval_path, npz_path
 
 def load_files(file_name, clean):
-    data_path = HOME + '/data/' + file_name + '.npz'
-    result_path = HOME + '/results/' + file_name + '/' 
-    index_path = result_path + 'index/'
-    search_path = result_path + 'search/'
-    eval_path = result_path + 'eval/'
-    npz_path = result_path + 'npz/'
-
+    data_path, result_path, index_path, search_path, eval_path, npz_path = load_paths(file_name)
     paths = (index_path, search_path, npz_path, eval_path)
 
     if clean==True:
@@ -53,7 +47,7 @@ def load_files(file_name, clean):
     print('num seqs = ', len(seqs), ' mean lenth of seqs = ', np.mean([len(seqs[i]) for i in range(len(seqs))]))
     print(Op)
     
-    return seqs, vals, num_seqs, options, Op, paths
+    return seqs, vals, num_seqs, options, Op
     
 
 def get_job_path(job, job_paths):
@@ -87,12 +81,12 @@ def crawl_dep(Map, curr):
 
 
 def run_jobs(jobs_flat, job_dep, command, job_paths):
-    fjob = get_job_path(('final',), job_paths)
     started = dict()
     for j in jobs_flat:
         started[j] = False
     fcommands = open(job_paths['clean'] + 'commands.sh', 'w+')
-    while not os.path.exists(fjob):
+    final_job = False
+    while not final_job:
         time.sleep(1)
         for job in jobs_flat:
             jp = get_job_path(job,job_paths)
@@ -100,7 +94,12 @@ def run_jobs(jobs_flat, job_dep, command, job_paths):
                 deps_satisfied = [os.path.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
                 if all(deps_satisfied):
                     cmd_combo = command + get_job_cmd(job)  
-                    os.system(cmd_combo)
+                    if job[0]=='final':
+                        final_job = True
+                        with open(job_paths['clean'] + 'final.result', 'r') as results:
+                            print(results.read())
+                    else:
+                        os.system(cmd_combo)
                     started[job] = True
                     print(cmd_combo)
                     print(cmd_combo, file = fcommands)
@@ -137,7 +136,7 @@ if __name__ == '__main__':
     num_neighbors = options.num_neighbors
     metric = options.metric
 
-    result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
+    data_path, result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
     job_paths = {'clean':result_path, 
             'build': index_path,
             'search' : search_path,
@@ -188,26 +187,45 @@ if __name__ == '__main__':
         run_jobs(jobs_flat, jobs_dep, command, job_paths) 
 
     elif options.target=='final':
+        with open(job_paths['clean'] + 'final.result', 'r') as results:
+            print(results.read())
         job_done = ('final', )
 
         
     elif options.target=='merge':
-        np.load(eval_path +str(sid)+'_'+str(sid2)+'.npz') 
+        quads = set()
+        summary = np.load(result_path+'num.npz')
+        N = summary['N']
+        num_seqs = summary['num_seqs']
+        Op = summary['Op']
+        Op = Op[()]
+        for i in range(N):
+            for j in range(N):
+                if i!=j:
+                    res = np.load(eval_path +str(i)+'_'+str(j)+'.npz') 
+                    q = res['quadrupples']
+                    quads = quads.union(q[()])
+        Total = 0
+        for ns in num_seqs:
+            Total = Total + ns*(ns-1)/2 * Op.num_genes
+        fresult = open(job_paths['clean'] + 'final.result', 'w+')
+        print('#'*50, file=fresult)
+        print('final recall : ', len(quads)*1.0/Total, file=fresult)
+        print('#'*50, file = fresult)
+        fresult.close()
 
         job_done = ('merge', )
 
     elif options.target=='clean':
         load_files(options.file_name, clean=True)
-        seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
+        seqs, vals, num_seqs, opts, Op = load_files(options.file_name, clean=False)
         np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op)
 
         job_done = ('clean', )
 
     elif options.target=='build':
     
-        seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        index_path, search_path, npz_path , eval_path= paths
-        
+        seqs, vals, num_seqs, opts, Op  = load_files(options.file_name, clean=False)
         kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
                                                  k = k_small, addy = True, padding = int(k_big))
         kmer_vals = utility.get_kmver_vals(s_kmer_vals, k_big)
