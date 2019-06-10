@@ -141,11 +141,13 @@ if __name__ == '__main__':
         print('done',file=open(search_path +str(sid)+'_'+str(sid2)+'.done','w+'))
 
     elif options.target=='eval':
-        seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
-        index_path, search_path, npz_path , eval_path= paths
+        #seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
+        #index_path, search_path, npz_path , eval_path= paths
+        result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
+        num_seqs = data1['num_seqs']
         kvals1 = data1['kmer_vals']
         kvals2 = data2['kmer_vals']
         search_data = np.load(search_path + str(sid)+'_'+str(sid2) + '.npz')
@@ -170,9 +172,12 @@ if __name__ == '__main__':
                     s1,s2 = np.sort([sid,sid2])
                     quadrupples.append( ( (s1,s2) , (kval1, kval2) ) )
         quadrupples = set(quadrupples)
-        np.savez(eval_path +str(sid)+'_'+str(sid2)+'.npz', quadrupples=quadrupples)
+        np.savez(eval_path +str(sid)+'_'+str(sid2)+'.npz', 
+                quadrupples = quadrupples, 
+                total_count = total_count, 
+                total_correct = total_correct)
         #np.savez(eval_path +str(sid)+'_'+str(sid2)+'.done', sid=sid)
         print('done',file=open(eval_path +str(sid)+'_'+str(sid2)+'.done','w+'))
         print('false positive = ', (total_count - total_correct)/total_count)
-        print('recall = ', len(quadrupples)*1.0/Op.num_genes)
+        print('recall = ', len(quadrupples)*1.0/num_genes)
 
