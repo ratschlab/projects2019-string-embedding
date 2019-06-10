@@ -8,7 +8,6 @@ import matplotlib.pyplot as pl
 from optparse import OptionParser
 from annoy import AnnoyIndex
 
-#HOME = '/cluster/home/ajoudaki/projects2019-string-embedding/python_tools'
 HOME = '/cluster/work/grlab/share/databases/genomes/synthetic'
 
 def load_paths(file_name):
@@ -88,19 +87,24 @@ def crawl_dep(Map, curr):
 
 
 def run_jobs(jobs_flat, job_dep, command, job_paths):
-    all_done = False
-    while not all_done:
-        all_done = True
+    fjob = get_job_path(('final',), job_paths)
+    started = dict()
+    for j in jobs_flat:
+        started[j] = False
+    fcommands = open(job_paths['clean'] + 'commands.sh', 'w+')
+    while not os.path.exists(fjob):
+        time.sleep(1)
         for job in jobs_flat:
             jp = get_job_path(job,job_paths)
-            if not os.path.exists(jp):
-                all_done = False
+            if not os.path.exists(jp) and not started[job]:
                 deps_satisfied = [os.path.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
                 if all(deps_satisfied):
-                    cmd_combo = 'eval " ' + command + get_job_cmd(job) + '; echo dummy > ' + jp + ' " ' 
-                    print('running command: '+ cmd_combo)
+                    cmd_combo = command + get_job_cmd(job)  
                     os.system(cmd_combo)
-        time.sleep(1)
+                    started[job] = True
+                    print(cmd_combo)
+                    print(cmd_combo, file = fcommands)
+    fcommands.close()
 
 
 
@@ -133,9 +137,16 @@ if __name__ == '__main__':
     num_neighbors = options.num_neighbors
     metric = options.metric
 
+    result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
+    job_paths = {'clean':result_path, 
+            'build': index_path,
+            'search' : search_path,
+            'eval': eval_path,
+            'merge': result_path ,
+            'final': result_path }
+
 
     if options.target=='all':
-        result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
         summary = np.load(result_path+'num.npz')
         N = summary['N']
         jobs_dep = dict()
@@ -161,12 +172,6 @@ if __name__ == '__main__':
                     eval_jobs.append(job)
         add_job(jobs_dep, ('merge',), eval_jobs)
 
-        job_paths = {'clean':result_path, 
-                'build': index_path,
-                'search' : search_path,
-                'eval': eval_path,
-                'merge': result_path ,
-                'final': result_path }
         dep_job = {'final':[], 
                 'clean': [('clean',)],
                 'build' : build_jobs,
@@ -179,21 +184,24 @@ if __name__ == '__main__':
 
         for k,v in options.__dict__.items():
             if k not in ['target', 'seq_id', 'search_seq_id', 'target', 'forward_target']:
-                command = command + '--' + k.replace('_','-') + ' ' + str(v) 
+                command = command + ' --' + k.replace('_','-') + ' ' + str(v) 
         run_jobs(jobs_flat, jobs_dep, command, job_paths) 
 
     elif options.target=='final':
-        pass
+        job_done = ('final', )
+
         
     elif options.target=='merge':
-        print('merge called')
-        pass
+        np.load(eval_path +str(sid)+'_'+str(sid2)+'.npz') 
+
+        job_done = ('merge', )
 
     elif options.target=='clean':
         load_files(options.file_name, clean=True)
-        result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
         seqs, vals, num_seqs, opts, Op, paths = load_files(options.file_name, clean=False)
         np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op)
+
+        job_done = ('clean', )
 
     elif options.target=='build':
     
@@ -219,9 +227,9 @@ if __name__ == '__main__':
                                         num_trees = num_trees, 
                                         metric = metric, 
                                         index_path = index_path + str(sid) + '.ann')
+        job_done = ('build', sid)
 
     elif options.target=='search':
-        result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         knn_index = AnnoyIndex(proj_dim, metric)
@@ -233,9 +241,9 @@ if __name__ == '__main__':
         search_indices = np.arange(0,convolved.shape[0],step_search)
         NN, NN_dist = utility.knn_search_value(knn_index, convolved, search_indices, build_indices,num_neighbors)
         np.savez(search_path + str(sid)+'_'+str(sid2) + '.npz', NN=NN, NN_dist=NN_dist, search_indices = search_indices)
+        job_done = ('search', sid, sid2)
 
     elif options.target=='eval':
-        result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
@@ -253,7 +261,6 @@ if __name__ == '__main__':
 
         total_len = len(search_indices)
         total_count = 0
-        #index_path, search_path, npz_path , eval_path= paths
         total_correct = 0
         quadrupples = []
         for kii in tqdm(range(total_len)):
@@ -272,8 +279,15 @@ if __name__ == '__main__':
                 quadrupples = quadrupples, 
                 total_count = total_count, 
                 total_correct = total_correct)
-        np.savez(eval_path +str(sid)+'_'+str(sid2)+'.done', sid=sid)
 
         print('false positive = ', (total_count - total_correct)/total_count)
         print('recall = ', len(quadrupples)*1.0/Op.num_genes)
+        
+        job_done = ('eval', sid, sid2)
+
+    # print done 
+    if options.target!='all':
+        Job_path = get_job_path(job_done, job_paths)
+        print('dummy', file=open(Job_path, 'w+'))
+
 
