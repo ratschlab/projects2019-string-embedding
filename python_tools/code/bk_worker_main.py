@@ -17,12 +17,13 @@ def load_paths(file_name):
     search_path = result_path + 'search/'
     eval_path = result_path + 'eval/'
     npz_path = result_path + 'npz/'
+    log_path = result_path + 'log/'
 
-    return data_path, result_path, index_path, search_path, eval_path, npz_path
+    return data_path, result_path, index_path, search_path, eval_path, npz_path, log_path
 
 def load_files(file_name, clean):
-    data_path, result_path, index_path, search_path, eval_path, npz_path = load_paths(file_name)
-    paths = (index_path, search_path, npz_path, eval_path)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
+    paths = (index_path, search_path, npz_path, eval_path, log_path)
 
     if clean==True:
         if os.path.exists(result_path):
@@ -81,10 +82,11 @@ def crawl_dep(Map, curr):
 
 
 def run_jobs(jobs_flat, job_dep, command, job_paths):
+    _, _, _, _, _, _, log_path = load_paths(file_name)
     started = dict()
     for j in jobs_flat:
         started[j] = False
-    fcommands = open(job_paths['clean'] + 'commands.sh', 'w+')
+    fcommands = open(log_path + 'commands.sh', 'w+')
     final_job = False
     while not final_job:
         time.sleep(1)
@@ -96,7 +98,8 @@ def run_jobs(jobs_flat, job_dep, command, job_paths):
                     cmd_combo = command + get_job_cmd(job)  
                     if job[0]=='final':
                         final_job = True
-                        with open(job_paths['clean'] + 'final.result', 'r') as results:
+                        os.system('mv lsf* '+ log_path)
+                        with open(log_path + 'final.result', 'r') as results:
                             print(results.read())
                     else:
                         os.system(cmd_combo)
@@ -135,8 +138,9 @@ if __name__ == '__main__':
     step_search = options.step_search
     num_neighbors = options.num_neighbors
     metric = options.metric
+    file_name = options.file_name
 
-    data_path, result_path, index_path, search_path, eval_path, npz_path = load_paths(options.file_name)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
     job_paths = {'clean':result_path, 
             'build': index_path,
             'search' : search_path,
@@ -187,8 +191,9 @@ if __name__ == '__main__':
         run_jobs(jobs_flat, jobs_dep, command, job_paths) 
 
     elif options.target=='final':
-        with open(job_paths['clean'] + 'final.result', 'r') as results:
+        with open(log_path + 'final.result', 'r') as results:
             print(results.read())
+        os.system('mv lsf* '+ log_path)
         job_done = ('final', )
 
         
@@ -208,7 +213,7 @@ if __name__ == '__main__':
         Total = 0
         for ns in num_seqs:
             Total = Total + ns*(ns-1)/2 * Op.num_genes
-        fresult = open(job_paths['clean'] + 'final.result', 'w+')
+        fresult = open(log_path + 'final.result', 'w+')
         print('#'*50, file=fresult)
         print('final recall : ', len(quads)*1.0/Total, file=fresult)
         print('#'*50, file = fresult)
@@ -218,14 +223,14 @@ if __name__ == '__main__':
 
     elif options.target=='clean':
         load_files(options.file_name, clean=True)
-        seqs, vals, num_seqs, opts, Op = load_files(options.file_name, clean=False)
+        seqs, vals, num_seqs, opts, Op = load_files(file_name, clean=False)
         np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op)
 
         job_done = ('clean', )
 
     elif options.target=='build':
     
-        seqs, vals, num_seqs, opts, Op  = load_files(options.file_name, clean=False)
+        seqs, vals, num_seqs, opts, Op  = load_files(file_name, clean=False)
         kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
                                                  k = k_small, addy = True, padding = int(k_big))
         kmer_vals = utility.get_kmver_vals(s_kmer_vals, k_big)
