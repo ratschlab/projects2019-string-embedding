@@ -60,9 +60,27 @@ def eval_results(search_indices, NN, kmers, kmer_vals, kmer_pos, kmer_seq_id, nu
     return quadrupples
 
 
+def all_kmers(Sigma, klen):
+    unique_kmers = []
+    sigma = len(Sigma)
+    arr = [0]*(klen+1)
+    while arr[klen]==0:
+        s = ''.join([Sigma[arr[i]] for i in range(klen)])
+        unique_kmers.append(s)
+        j = 0
+        arr[0] = arr[0] + 1
+        while arr[j]>=sigma:
+            arr[j] = 0
+            j = j + 1
+            arr[j] = arr[j] + 1
+    return unique_kmers
+
+
 def random_projection(skmers, k_big, proj_dim):
+    np.random.seed(0)
     total_slen = len(skmers)
-    unique_skmers = list(set(skmers))
+    #unique_skmers = list(set(skmers))
+    unique_skmers = all_kmers('acgtxy',len(skmers[0]))
     nkmers = len(unique_skmers)
 
     kmer2id = {}
@@ -79,7 +97,7 @@ def random_projection(skmers, k_big, proj_dim):
 
     my_print(' computing the convolution')
 
-    convolved = np.zeros(shape = projection.shape, dtype = np.int32)
+    convolved = np.zeros(shape = projection.shape, dtype = np.int8)
     for di in tqdm(range(proj_dim)):
         convolved[:,di] = np.convolve(projection[:,di],np.ones(k_big), mode='same')
 
