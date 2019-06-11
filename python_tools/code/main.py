@@ -88,7 +88,7 @@ def get_bsub_cmd(job, options, mem = -1, t = -1):
     command = 'bsub -o  ' + log_path                                # save lsf.o output in the log
     command = command + ' -R "rusage[mem=' + str(mem) + '000]" '    # allocate memory 
     command = command + ' -W ' + str(t) +  ':00 '                   # allocate time 
-    command = command + ' python bk_worker_main.py '                # name of the process
+    command = command + ' python main.py '                # name of the process
 
     # add options, but remove args irrelevant to worker processes
     # target, target_forward, memory, and time are only for dispatcher
