@@ -65,7 +65,7 @@ def get_job_path(job, job_paths):
 
 
 # generate job-specific arguments
-def get_job_args(job):
+def gen_job_args(job):
     S = ' --target ' + job[0] 
     argnames = ['', ' --seq-id ', ' --search-seq-id '] 
     for i in range(1,len(job)):
@@ -74,22 +74,19 @@ def get_job_args(job):
 
 
 
-# generate the full bsub command 
-def get_bsub_cmd(job, options, mem = -1, t = -1, lsf_name = ''):
-
+# generate the full bsub command based on job and resources 
+# resources default to options defaults if not provided
+def get_bsub_cmd(job, options, mem = -1, t = -1):
     _, _, _, _, _, _, log_path = load_paths(file_name)
     # if not override, use options defaults
     if mem==-1:
         mem = options.memory
     if t==-1:
         t = options.time
-    if lsf_name=='':
-        lsf_name = get_job_path(job, log_path).replace('.done','')
 
     # create bsub command 
-    command = 'bsub '
-    command = ' -o  lsf.' + lsf_name                               # save lsf.o output in the log
-    command = command + ' -R "rusage[mem=' + str(memory) + '000]" ' # allocate memory 
+    command = 'bsub -o  ' + log_path                                # save lsf.o output in the log
+    command = command + ' -R "rusage[mem=' + str(mem) + '000]" '    # allocate memory 
     command = command + ' -W ' + str(t) +  ':00 '                   # allocate time 
     command = command + ' python bk_worker_main.py '                # name of the process
 
@@ -101,7 +98,9 @@ def get_bsub_cmd(job, options, mem = -1, t = -1, lsf_name = ''):
             command = command + ' --' + k.replace('_','-') + ' ' + str(v)       # get argname from varname 
 
     # add job args to bsub and option args
-    command = command + get_job_args(job)      
+    command = command + gen_job_args(job)      
+
+    return command
 
 
 # recursively compute jobs that need to run based on dependency map
@@ -125,37 +124,41 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
     started = dict()
     for j in jobs_flat:
         started[j] = False
-    fcommands = open(log_path + 'commands.sh', 'w+')
-    flog = open(log_path + 'log.out', 'w+')
-    final_job = False
-    while not final_job:
-        killed_jobs = get_killed_jobs(log_path)
-        for kj in killed_jobs:
-            if kj in jobs_flat:
-                bsub_cmd = handle_killed_job(fname = kj.fname, job = kj.job, 
-                        memory = kj.memory, t = kj.time, reason = kj.reason, 
-                        log_path = log_path, options = options)
-                bsub_out = subprocess.check_output(bsub_cmd, shell=True)
-                print(bsub_out, file = flog)
-                print(bsub_cmd, file = fcommands)
-                print('RUNNING again : ', bsub_cmd)
+    fcommands = open(log_path + 'commands.sh', 'a+')
+    flog = open(log_path + 'log.txt', 'a+')
+    final_job_done = False
+    counter = -1 
+    while not final_job_done:
+        counter = (counter + 1) % 10
+        # handled killed jobs every 10 rounds to avoid clogging the runtime
+        if counter == 0:
+            killed_jobs = find_killed_jobs(log_path)
+            for kj in killed_jobs:
+                if kj.job in jobs_flat:
+                    bsub_cmd = newcmd_for_killed(fname = kj.fname, job = kj.job, 
+                            memory = kj.memory, t = kj.time, reason = kj.reason, 
+                            log_path = log_path, options = options)
+                    print('RUNNING after killed : ', bsub_cmd)
+                    bsub_out = subprocess.check_output(bsub_cmd, shell=True)
+                    started[kj.job] = True
+                    print(bsub_out, file = flog)
+                    print(bsub_cmd, file = fcommands)
         for job in jobs_flat:
             jp = get_job_path(job,job_paths)
             if not os.path.exists(jp) and not started[job]:
                 deps_satisfied = [os.path.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
                 if all(deps_satisfied):
-                    bsub_cmd = get_bsub_cmd(job)  
+                    bsub_cmd = get_bsub_cmd(job, options)  
                     print('RUNNING: ', bsub_cmd)
+                    bsub_out = subprocess.check_output(bsub_cmd, shell=True)
+                    started[job] = True
+                    print(bsub_out, file = flog)
+                    print(bsub_cmd, file = fcommands)
+                    # if it's the final job print the results on the output
                     if job[0]=='final':
-                        final_job = True
+                        final_job_done = True
                         with open(log_path + 'final.result', 'r') as results:
                             print(results.read())
-                    else:
-                        #os.system(bsub_cmd)
-                        bsub_out = subprocess.check_output(bsub_cmd, shell=True)
-                        print(bsub_out, file = flog)
-                    started[job] = True
-                    print(bsub_cmd, file = fcommands)
         time.sleep(1)
     fcommands.close()
     flog.close()
@@ -163,7 +166,7 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
 
 # construct job tupple from input and return job
 # if the job is inconsistent with job format return error=True
-def get_job_compressed(target, i, j):
+def get_job_from_args(target, i, j):
     if i>=0 and j>=0:
         job =  (target, i, j)
     elif i>=0:
@@ -181,34 +184,40 @@ def get_job_compressed(target, i, j):
     return job, error
 
 
-def handle_killed_job(fname, job, memory, t, reason, log_path, options):
-    if not os.path.exists(log_path + 'killed'):
-        os.makedirs(log_path + 'killed')
-    shutil.move( log_path + fname, log_path + 'killed/' + fname)
+# create new bsub command for the killed job 
+def newcmd_for_killed(fname, job, memory, t, reason, log_path, options):
     if reason=='memory':
-        cmd = get_bsub_cmd(job, options, mem = memory*2, t = t, log_path + 'again_'+ fname ) 
+        cmd = get_bsub_cmd(job = job, options = options, mem = memory*2, t = t ) 
     elif reason=='time':
-        cmd = get_bsub_cmd(job, options, mem = memory, t = t*2, log_path + 'again_'+ fname ) 
+        if t<=4:
+            t2 = 24
+        elif t<=24:
+            t2 = 120
+        else:
+            raise(Exception('the killed jobs has taken more than 120 hours, can\'t create the new job'))
+        cmd = get_bsub_cmd(job = job, options = options, mem = memory, t = t2 ) 
     else: 
-        raise(Exception('uknown reason for the killed job, can\'t handle the job'))
+        raise(Exception('uknown reason for the killed job, can\'t create the new job'))
 
     return cmd
     
 
-
-
-
-
-# get killed job from lsf.o* files in the log path
+# get killed job from lsf.o* files in the log path and moves them to log_path/killed
 # throws an exception if an error happens in the job recovery
-def get_killed_jobs(log_path):
+def find_killed_jobs(log_path):
+    if not os.path.exists(log_path + 'killed'):
+        os.makedirs(log_path + 'killed')
+    # search for files with patern lsf* or *.out
     files = glob.glob(log_path + 'lsf*')
+    files.extend(glob.glob(log_path + '*.out'))
     killed_jobs = []
-    for fname in files:
-        with open(fname, 'r') as f:
+    error = False
+    e_message = ''
+    for fpath in files:
+        fname = fpath.split('/')[-1]
+        with open(fpath, 'r') as f:
             content = f.read()
             if 'job killed' in content:
-                print(' handling lsf file that was killed : ', fname)
                 L = content.split()
                 arg_vals = ['', 10, 4, -1, -1]
                 arg_names = ['--'+s for s in ['target', 'memory', 'time', 'seq-id', 'searc-seq-id'] ]
@@ -227,15 +236,26 @@ def get_killed_jobs(log_path):
                     reason = 'memory'
                 elif 'TERM_RUNLIMIT' in content:
                     reason = 'time' 
-                job, error =  get_job_compressed(target, i, j)
-                if error==True:
-                    raise(Exception("can't recover killed job ", job))
+                elif 'TERM_OWNER' in content:
+                    reason = 'user'
+                job, e =  get_job_from_args(target, i, j)
+                if e==True or reason=='unkonwn':
+                    error = True
+                if e==True:
+                    e_message = ("killed job recovered from LSF file incorrectly: "+ str(job))
                 elif reason == 'unkown':
-                    raise(Exception("job killed for unkown reason ", job))
+                    e_message = ("job killed for unkown reason "+ str(job) )
+                Dict = {'fname' : fname, 'job' : job, 'memory':memory, 'time' : time, 'reason': reason}
+                kj = AttrDict(Dict)
+                shutil.move( fpath, log_path + 'killed/' + fname)
+                print('found killed job : ', job, ' and moved lsf file: ', fname, ' to killed/ dir' )
+                # add job if it's not killed by the user
+                if reason != 'user':
+                    killed_jobs.append(kj)
+    # raise an exception of an error occured in processing killed jobs
+    if error == True:
+        raise(Exception(e_message)) 
 
-                kj = AttrDict({'fname' : fname.split('/')[1], 'job' : job, 'memory':memory, 'time' : time, 'reason': reason})
-                #killed_jobs.append( [fname.split('/')[1], job, memory, time, reason] ) 
-                killed_jobs.append(kj)
     return killed_jobs
 
 
@@ -433,7 +453,8 @@ if __name__ == '__main__':
         
         job_done = ('eval', sid, sid2)
 
-    # print done 
+    # print done for all targets 
+    # except for all target that is the dispatcher 
     if options.target!='all':
         Job_path = get_job_path(job_done, job_paths)
         print('dummy', file=open(Job_path, 'w+'))
