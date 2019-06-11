@@ -2,13 +2,14 @@ import utility
 import numpy as np
 from importlib import reload
 reload(utility)
-import sys, os, shutil, time
+import sys, os, shutil, time, subprocess
 from tqdm import tqdm
 import matplotlib.pyplot as pl
 from optparse import OptionParser
 from annoy import AnnoyIndex
 
-HOME = '/cluster/work/grlab/share/databases/genomes/synthetic'
+#HOME = '/cluster/work/grlab/share/databases/genomes/synthetic'
+HOME = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
 
 def load_paths(file_name):
     data_path = HOME + '/data/' + file_name + '.npz'
@@ -123,9 +124,10 @@ if __name__ == '__main__':
     parser.add_option('-m','--metric',dest='metric', default = 'euclidean', type='string', help = 'metric to be used')
     parser.add_option('-S','--step-search',dest='step_search', default = 5, type='int', help = 'step for indices of KNN built')
     parser.add_option('-N','--num-neighbors',dest='num_neighbors', default = 50, type='int', help = 'number of nearest neighbors to search')
-    parser.add_option('-M','--memory',dest='memory', default = 30, type='int', help = 'memory to allocate for each process')
     parser.add_option('-t','--target',dest='target', default = 'build', type='string', help = 'metric to be used')
-    parser.add_option('-T','--forward-target',dest='forward_target', default = 'merge', type='string', help = 'metric to be used')
+    parser.add_option('-F','--forward-target',dest='forward_target', default = 'merge', type='string', help = 'metric to be used')
+    parser.add_option('-M','--memory',dest='memory', default = 30, type='int', help = 'memory to allocate for each process')
+    parser.add_option('-T','--time',dest='time', default = 4, type='int', help = 'designated time for each process')
     (options, args) = parser.parse_args()
 
     sid = options.seq_id
