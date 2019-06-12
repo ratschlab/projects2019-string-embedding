@@ -124,6 +124,9 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
     started = dict()
     for j in jobs_flat:
         started[j] = False
+    printed = dict()
+    for j in jobs_flat:
+        printed[j] = False
     fcommands = open(log_path + 'commands.sh', 'a+')
     flog = open(log_path + 'log.txt', 'a+')
     final_job_done = False
@@ -161,6 +164,12 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
                         final_job_done = True
                         with open(log_path + 'final.result', 'r') as results:
                             print(results.read())
+            ep = jp.replace('.done','.txt')
+            if job[0]=='eval' and not printed[job] and os.path.exists(ep):
+                ef = open(ep,'r')
+                print(ef.read())
+                printed[job] = True
+
         time.sleep(1)
     fcommands.close()
     flog.close()
@@ -372,7 +381,7 @@ if __name__ == '__main__':
             seq_lens = [len(seqs[i]) for i in range(len(seqs))]
 
         fresult = open(log_path + 'final.result', 'w+')
-        print('#'*50, file=fresult)
+        print('FINAL RESULT ' + '#'*50, file=fresult)
         print('number of seqs: ', N , file=fresult)
         print('seq options : ', Op, file = fresult)
         print('mean seq len: ', np.mean(seq_lens), file = fresult)
@@ -430,6 +439,7 @@ if __name__ == '__main__':
         job_done = ('search', sid, sid2)
 
     elif options.target=='eval':
+        job_done = ('eval', sid, sid2)
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
@@ -468,8 +478,14 @@ if __name__ == '__main__':
 
         print('false positive = ', (total_count - total_correct)/total_count)
         print('recall = ', len(quadrupples)*1.0/Op.num_genes)
+        jp = get_job_path(job_done, job_paths).replace('.done','')
+        feval = open(jp+'.txt', 'w+')
+        print('EVAL RESULT ' + '#'*50, file=feval)
+        print('eval job: -i ', sid, ', -j ', sid2, file=feval)
+        print('false positive = ', (total_count - total_correct)/total_count, file=feval)
+        print('recall = ', len(quadrupples)*1.0/Op.num_genes, file=feval)
+        print( '#'*62, file=feval)
         
-        job_done = ('eval', sid, sid2)
 
     # print done for all targets 
     # except for all target that is the dispatcher 
