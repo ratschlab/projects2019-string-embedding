@@ -77,7 +77,7 @@ def all_kmers(Sigma, klen):
 
 
 def random_projection(skmers, k_big, proj_dim):
-    np.random.seed(0)
+    np.random.seed(np.random.randint(1000))
     total_slen = len(skmers)
     #unique_skmers = list(set(skmers))
     unique_skmers = all_kmers('acgtxy',len(skmers[0]))
