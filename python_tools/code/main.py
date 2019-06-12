@@ -133,14 +133,15 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
         counter = (counter + 1) % 10
         # handled killed jobs every 10 rounds to avoid clogging the runtime
         if counter == 0:
-            killed_jobs = find_killed_jobs(log_path)
+            killed_jobs = find_killed_jobs(log_path, flog)
             for kj in killed_jobs:
                 if kj.job in jobs_flat:
                     bsub_cmd = newcmd_for_killed(fname = kj.fname, job = kj.job, 
                             memory = kj.memory, t = kj.time, reason = kj.reason, 
                             log_path = log_path, options = options)
-                    print('RUNNING after killed : ', bsub_cmd)
                     bsub_out = subprocess.check_output(bsub_cmd, shell=True)
+                    print('RUNNING after killed : ', bsub_cmd)
+                    print('RUNNING after killed : ', bsub_cmd, file = flog)
                     started[kj.job] = True
                     print(bsub_out, file = flog)
                     print(bsub_cmd, file = fcommands)
@@ -150,8 +151,9 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
                 deps_satisfied = [os.path.exists(get_job_path(j,job_paths)) for j in job_dep[job] ] 
                 if all(deps_satisfied):
                     bsub_cmd = get_bsub_cmd(job, options)  
-                    print('RUNNING: ', bsub_cmd)
                     bsub_out = subprocess.check_output(bsub_cmd, shell=True)
+                    print('RUNNING: ', bsub_cmd)
+                    print('RUNNING: ', bsub_cmd, file = flog)
                     started[job] = True
                     print(bsub_out, file = flog)
                     print(bsub_cmd, file = fcommands)
@@ -205,7 +207,7 @@ def newcmd_for_killed(fname, job, memory, t, reason, log_path, options):
 
 # get killed job from lsf.o* files in the log path and moves them to log_path/killed
 # throws an exception if an error happens in the job recovery
-def find_killed_jobs(log_path):
+def find_killed_jobs(log_path, flog):
     if not os.path.exists(log_path + 'killed'):
         os.makedirs(log_path + 'killed')
     # search for files with patern lsf* or *.out
@@ -249,7 +251,8 @@ def find_killed_jobs(log_path):
                 Dict = {'fname' : fname, 'job' : job, 'memory':memory, 'time' : time, 'reason': reason}
                 kj = AttrDict(Dict)
                 shutil.move( fpath, log_path + 'killed/' + fname)
-                print('found killed job : ', job, ' and moved lsf file: ', fname, ' to killed/ dir' )
+                print('found killed job : ', job, ' mem = ', memory, ' time = ', time, ', and moved lsf file: ', fname, ' to killed/ ' )
+                print('found killed job : ', job, ' mem = ', memory, ' time = ', time, ', and moved lsf file: ', fname, ' to killed/ ' , file = flog)
                 # add job if it's not killed by the user
                 if reason != 'user':
                     killed_jobs.append(kj)
