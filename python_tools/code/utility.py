@@ -188,7 +188,6 @@ def list_kmers(seqs, vals = [],  k = 10,  to_sort = False, addx = True, addy = F
 
         for i in range(len(S)-k+1):
             kmers.append(S[i:i+k])
-            #kmer_vals.append(np.count_nonzero(Val[i:i+k]))
             val,freq = Counter(Val[i:i+k]).most_common(1)[0]
 
             if val>0 and freq>k*.7:
