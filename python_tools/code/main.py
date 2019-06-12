@@ -477,5 +477,3 @@ if __name__ == '__main__':
     if options.target!='all':
         Job_path = get_job_path(job_done, job_paths)
         print('dummy', file=open(Job_path, 'w+'))
-
-
