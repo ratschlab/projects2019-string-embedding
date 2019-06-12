@@ -127,5 +127,3 @@ def interval_intersect(i1,j1,i2,j2):
     elif i1>=j2:
         return 0,3
 
-
-
