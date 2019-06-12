@@ -1,20 +1,19 @@
-import utility 
 import numpy as np
-from importlib import reload
-reload(utility)
 import sys, os, shutil, time, subprocess, glob, re
 from tqdm import tqdm
 import matplotlib.pyplot as pl
 from optparse import OptionParser
 from annoy import AnnoyIndex
 from attrdict import AttrDict
+from importlib import reload
+import utility 
+reload(utility)
 
-#HOME = '/cluster/work/grlab/share/databases/genomes/synthetic'
-HOME = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
+PROJ_DIR = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
 
 def load_paths(file_name):
-    data_path = HOME + '/data/' + file_name + '.npz'
-    result_path = HOME + '/results/' + file_name +'/'  
+    data_path = PROJ_DIR + '/data/' + file_name + '.npz'
+    result_path = PROJ_DIR + '/results/' + file_name +'/'  
     index_path = result_path + 'index/'
     search_path = result_path + 'search/'
     eval_path = result_path + 'eval/'
