@@ -96,6 +96,7 @@ def get_bsub_cmd(job, options, mem = -1, t = -1):
     for k,v in options.__dict__.items():
         if k not in ['target', 'seq_id', 'search_seq_id', 'target', 'forward_target', 'memory', 'time']:
             command = command + ' --' + k.replace('_','-') + ' ' + str(v)       # get argname from varname 
+    command = command + ' --time ' + str(t) + ' --memory ' + str(mem)
 
     # add job args to bsub and option args
     command = command + gen_job_args(job)      
@@ -177,9 +178,9 @@ def get_job_from_args(target, i, j):
     if target=='':
         error = True
     if target in ['search', 'eval'] and j==-1:
-        error = -1
+        error = True
     if target in ['build', 'search', 'eval'] and i==-1:
-        error = -1
+        error = True
     
     return job, error
 
@@ -220,7 +221,7 @@ def find_killed_jobs(log_path):
             if 'job killed' in content:
                 L = content.split()
                 arg_vals = ['', 10, 4, -1, -1]
-                arg_names = ['--'+s for s in ['target', 'memory', 'time', 'seq-id', 'searc-seq-id'] ]
+                arg_names = ['--'+s for s in ['target', 'memory', 'time', 'seq-id', 'search-seq-id'] ]
                 __arg_names = ['-'+s for s in ['t', 'M', 'T', 'i', 'j'] ]
                 for argi,arg in enumerate(arg_names):
                     if arg in L:
