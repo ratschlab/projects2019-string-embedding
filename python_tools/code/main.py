@@ -353,17 +353,31 @@ if __name__ == '__main__':
         num_seqs = summary['num_seqs']
         Op = summary['Op']
         Op = Op[()]
+        total_count = 0
+        total_correct = 0
         for i in range(N):
             for j in range(N):
                 if i!=j:
                     res = np.load(eval_path +str(i)+'_'+str(j)+'.npz') 
                     q = res['quadrupples']
                     quads = quads.union(q[()])
+                    total_count = total_count + res['total_count']
+                    total_correct = total_correct + res['total_correct']
         Total = 0
         for ns in num_seqs:
             Total = Total + ns*(ns-1)/2 * Op.num_genes
+        if 'seq_lens' in summary.files:
+            seq_lens = summary['seq_lens']
+        else:
+            seqs, _, _, _, _ = load_files(file_name, clean=False)
+            seq_lens = [len(seqs[i]) for i in range(len(seqs))]
+
         fresult = open(log_path + 'final.result', 'w+')
         print('#'*50, file=fresult)
+        print('number of seqs: ', N , file=fresult)
+        print('seq options : ', Op, file = fresult)
+        print('mean seq len: ', np.mean(seq_lens), file = fresult)
+        print('false positive : ', (total_count - total_correct ) *1.0/total_count, file = fresult)
         print('final recall : ', len(quads)*1.0/Total, file=fresult)
         print('#'*50, file = fresult)
         fresult.close()
@@ -373,7 +387,8 @@ if __name__ == '__main__':
     elif options.target=='clean':
         load_files(options.file_name, clean=True)
         seqs, vals, num_seqs, opts, Op = load_files(file_name, clean=False)
-        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op)
+        seq_lens = [len(seqs[i]) for i in range(len(seqs))]
+        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op, seq_lens = seq_lens)
 
         job_done = ('clean', )
 
