@@ -59,15 +59,19 @@ def load_files(file_name, clean):
     
     return seqs, vals, num_seqs, options, Op
 
-def get_summary(file_name):
+def get_summary(file_name, options):
     data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
     if not os.path.exists(result_path + 'num.npz'):
         seqs, vals, num_seqs, opts, Op = load_files(file_name, clean=False)
         seq_lens = [len(seqs[i]) for i in range(len(seqs))]
         np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op, seq_lens = seq_lens)
-    else:
+    # check if the main parameters are consistent with the previous run
+    # if target is clean, it doesn't matter, 
+    # if it's continue, options will be replaced by the previous ones
+    elif options.target!='clean' and options.target!='continue':
         summary = np.load(result_path + 'num.npz')
         opts = summary['options']
+        opts = opts[()]
         if options.file_name != opts.file_name:
             raise(Exception('file_name incosistent: ', options.file_name, opts.file_name ))
         if options.proj_dim!=opts.proj_dim:
@@ -368,6 +372,13 @@ if __name__ == '__main__':
     num_neighbors = options.num_neighbors
     metric = options.metric
     file_name = options.file_name
+    target = options.target
+    # if target is to continue do the all target, but load the options from the file
+    if target=='continue':
+        if options.directory=='auto':
+            raise(Exception('target continue cannot work with automatic directory'))
+        target = 'all';
+
     if options.directory=='auto':
         RESULT_DIR = file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').replace('.','_')
     elif options.directory=='exp':
@@ -385,16 +396,29 @@ if __name__ == '__main__':
             'all': result_path , 
             'npz' : npz_path }
 
-    get_summary(file_name)
+    get_summary(file_name, options)
 
-    job_done = get_job_from_target(options.target, sid, sid2)
+    job_done = get_job_from_target(target, sid, sid2)
     fout_path = get_job_path(job_done, job_paths, '.txt')
     fout = open(fout_path, 'w+')
 
 
-    if options.target=='all':
+    if target=='all':
         summary = np.load(result_path+'num.npz')
         N = summary['N']
+        if options.target=='continue':
+            saved_options = summary['options']
+            proj_dim = saved_options.proj_dim
+            k_small = saved_options.small_k 
+            k_big = saved_options.big_k
+            num_trees = saved_options.num_trees
+            step_build = saved_options.step_build
+            step_search = saved_options.step_search
+            num_neighbors = saved_options.num_neighbors
+            metric = saved_options.metric
+            file_name = saved_options.file_name
+            options = saved_options
+
         jobs_dep = dict()
 
         add_job(jobs_dep,('clean',),[])
@@ -430,11 +454,11 @@ if __name__ == '__main__':
         jobs_flat = crawl_dep(jobs_dep, ('final',))
         run_jobs(jobs_flat, jobs_dep, options, job_paths) 
 
-    elif options.target=='final':
+    elif target=='final':
         pass
 
         
-    elif options.target=='merge':
+    elif target=='merge':
         quads = set()
         summary = np.load(result_path+'num.npz')
         N = summary['N']
@@ -471,12 +495,12 @@ if __name__ == '__main__':
         print('-'*63 + '\n', file = fout)
 
 
-    elif options.target=='clean':
+    elif target=='clean':
         load_files(file_name, clean=True)
-        get_summary(file_name)
+        get_summary(file_name, options)
 
 
-    elif options.target=='build':
+    elif target=='build':
     
         seqs, vals, num_seqs, opts, Op  = load_files(file_name, clean=False)
         kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
@@ -499,7 +523,7 @@ if __name__ == '__main__':
                                         metric = metric, 
                                         index_path = index_path + str(sid) + '.ann')
 
-    elif options.target=='search':
+    elif target=='search':
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         knn_index = AnnoyIndex(proj_dim, metric)
@@ -512,7 +536,7 @@ if __name__ == '__main__':
         NN, NN_dist = utility.knn_search_value(knn_index, convolved, search_indices, build_indices,num_neighbors)
         np.savez(search_path + str(sid)+'_'+str(sid2) + '.npz', NN=NN, NN_dist=NN_dist, search_indices = search_indices)
 
-    elif options.target=='eval':
+    elif target=='eval':
 
         data1 = np.load(npz_path+'data'+str(sid)+'.npz')
         data2 = np.load(npz_path+'data'+str(sid2)+'.npz')
