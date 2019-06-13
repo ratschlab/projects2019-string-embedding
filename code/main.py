@@ -10,6 +10,7 @@ from datetime import datetime
 import utility 
 reload(utility)
 
+# set the directory where the sequence data is located
 PROJ_DIR = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
 RESULT_DIR = '__UNASSIGNED__'
 
@@ -64,6 +65,19 @@ def get_summary(file_name):
         seqs, vals, num_seqs, opts, Op = load_files(file_name, clean=False)
         seq_lens = [len(seqs[i]) for i in range(len(seqs))]
         np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op, seq_lens = seq_lens)
+    else:
+        summary = np.load(result_path + 'num.npz')
+        opts = summary['options']
+        if options.file_name != opts.file_name:
+            raise(Exception('file_name incosistent: ', options.file_name, opts.file_name ))
+        if options.proj_dim!=opts.proj_dim:
+            raise(Exception('proj_dim is incosistent: ', options.proj_dim, opts.proj_dim));
+        if options.big_k!= opts.big_k:
+            raise(Exception('big_k is incosistent : ', options.big_k, opts.big_k))
+        if options.small_k!= opts.small_k:
+            raise(Exception('small_k is incosistent : ', options.small_k, opts.small_k))
+        if options.metric!= opts.metric:
+            raise(Exception('metric is incosistent : ', options.metric, opts.metric))
     
 
 def get_job_path(job, job_paths, ext):
@@ -145,7 +159,7 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
     counter = -1 
     finished = [False] * len(jobs_flat)
     while not sum(finished)==len(finished):
-        counter = (counter + 1) % 10
+        counter = (counter + 1) % 5
         # find and hanlde killed jobs (rerun with more resource)
         if counter == 0:
             killed_jobs = find_killed_jobs(log_path, flog)
@@ -269,7 +283,7 @@ def find_killed_jobs(log_path, flog):
         fname = fpath.split('/')[-1]
         with open(fpath, 'r') as f:
             content = f.read()
-            if 'job killed' in content:
+            if 'job killed' in content or 'Exited with exit code' in content:
                 L = content.split()
                 arg_vals = ['', 10, 4, -1, -1]
                 arg_names = ['--'+s for s in ['target', 'memory', 'time', 'seq-id', 'search-seq-id'] ]
@@ -290,13 +304,20 @@ def find_killed_jobs(log_path, flog):
                     reason = 'time' 
                 elif 'TERM_OWNER' in content:
                     reason = 'user'
+                elif 'Exited with exit code' in content:
+                    reason = 'error'
                 job, e =  get_job_from_args(target, i, j)
-                if e==True or reason=='unkonwn':
+                if e==True or reason in ['unkonwn' ,'error']:
                     error = True
+                e_message = ''
                 if e==True:
                     e_message = ("killed job recovered from LSF file incorrectly: "+ str(job))
-                elif reason == 'unkown':
-                    e_message = ("job killed for unkown reason "+ str(job) )
+                if reason == 'unkown':
+                    e_message = e_message + '\n' + ("job killed for unkown reason "+ str(job) )
+                if reason == 'error':
+                    err_index=  content.index('The output (if any) follows:')
+                    excerpt = content[err_index:]
+                    e_message = e_message + '\n' + excerpt
                 Dict = {'fname' : fname, 'job' : job, 'memory':memory, 'time' : time, 'reason': reason}
                 kj = AttrDict(Dict)
                 shutil.move( fpath, log_path + 'killed/' + fname)
@@ -348,7 +369,7 @@ if __name__ == '__main__':
     metric = options.metric
     file_name = options.file_name
     if options.directory=='auto':
-        RESULT_DIR = file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').split('.')[0]
+        RESULT_DIR = file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').replace('.','_')
     elif options.directory=='exp':
         RESULT_DIR = 'experimental/' + file_name
     else:
