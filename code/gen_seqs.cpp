@@ -75,9 +75,13 @@ public:
 };
 
 
-int rand_int(int max, int min = 0) {
+int rand_int(int min, int max) {
     int rv = std::rand();
     return min + rv% (max - min); 
+}
+
+int rand_int(int max) {
+    return rand_int(0, max);
 }
 
 vector<int> rand_vect(int min, int max, int size) {
@@ -105,10 +109,10 @@ vector<char> mutate_seq(vector<char> &seq, seq_options &opts, std::string Sigma)
         double rv = (double)rand() / RAND_MAX;
         if (rv< opts.mutation_rate) {
             // choose randomly between in/del/sub
-            int ri = rand_int(0,3);         
+            int ri = rand_int(3);         
             // if we've reached the seq end, only insert is possible
             int rounds = db(gen);
-            for (int r; r<rounds; r++) {
+            for (int r = 0; r<rounds; r++) {
                 if (i==seq.size()) {
                     ri = 1; 
                 } 
@@ -131,6 +135,7 @@ vector<char> mutate_seq(vector<char> &seq, seq_options &opts, std::string Sigma)
             i++;
         }
     }
+    string s(seq2.begin(), seq2.end());
     return seq2;
 }
 
