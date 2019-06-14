@@ -342,7 +342,7 @@ def find_killed_jobs(log_path, flog):
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option('-f','--file-name',dest='file_name', default = 'seqs0', type='string', help = 'seq file to load')
+    parser.add_option('-f','--file-name',dest='file_name', default = '', type='string', help = 'seq file to load')
     parser.add_option('-i','--seq-id',dest='seq_id', default = 0, type='int', help = 'seq id to build index for')
     parser.add_option('-j','--search-seq-id',dest='search_seq_id', default = 0, type='int', help = 'search sequence id')
     parser.add_option('-k','--small-k',dest='small_k', default = 3, type='int', help = 'small k to do kmer counting')
@@ -377,6 +377,8 @@ if __name__ == '__main__':
             raise(Exception('target continue cannot work with automatic directory'))
         if not os.path.exists(result_path + 'num.npz'):
             raise(Exception('num.npz not found, target continue requires it to run'))
+        if options.file_name == '':
+            raise(Exception('target continue requires specifying --file-name '))
         summary = np.load(result_path+'num.npz')
         saved_options = summary['options']
         options = saved_options[()]
