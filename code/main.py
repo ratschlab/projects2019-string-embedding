@@ -418,12 +418,17 @@ if __name__ == '__main__':
 
         jobs_dep = dict()
 
-        add_job(jobs_dep,('clean',),[])
+        # add clean job if directory is not set automatically
+        if options.directory!='auto':
+            add_job(jobs_dep,('clean',),[])
         build_jobs = []
         for i in range(N):
             job = ('build',i) 
-            add_job(jobs_dep,job,[('clean',)])
-            #add_job(jobs_dep,job,[])
+            # add clean dependency if directory is not set automatically
+            if options.directory=='auto':
+                add_job(jobs_dep,job,[])
+            else:
+                add_job(jobs_dep,job,[('clean',)])
             build_jobs.append(job)
         search_jobs = []
         for i in range(N):
