@@ -175,9 +175,9 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
                     bsub_out = subprocess.check_output(bsub_cmd, shell=True)
                     if options.verbose>=1:
                         print('RUNNING after killed : ', bsub_cmd)
-                        print('RUNNING after killed : ', bsub_cmd, file = flog)
                         sys.stdout.flush()
                         
+                    print('RUNNING after killed : ', bsub_cmd, file = flog)
                     started[kj.job] = True
                     print(bsub_out, file = flog)
                     print(bsub_cmd, file = fcommands)
@@ -193,8 +193,8 @@ def run_jobs(jobs_flat, job_dep, options, job_paths):
                     bsub_out = subprocess.check_output(bsub_cmd, shell=True)
                     if options.verbose>=1:
                         print('RUNNING: ', bsub_cmd)
-                        print('RUNNING: ', bsub_cmd, file = flog)
                         sys.stdout.flush()
+                    print('RUNNING: ', bsub_cmd, file = flog)
                     started[job] = True
                     print(bsub_out, file = flog)
                     print(bsub_cmd, file = fcommands)
@@ -361,6 +361,27 @@ if __name__ == '__main__':
     parser.add_option('-d','--directory',dest='directory', default = 'exp', type='str', help = ' directory for results (exp: save in experimental, auto: create new dir) ')
     (options, args) = parser.parse_args()
 
+    # set the result directory based on options.directory
+    if options.directory=='auto':
+        RESULT_DIR = options.file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').replace('.','_')
+    elif options.directory=='exp':
+        RESULT_DIR = 'experimental/' + options.file_name
+    else:
+        RESULT_DIR = options.directory
+
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(options.file_name)
+    # if target is to continue do the all target, but load the options from the file
+    target = options.target
+    if options.target=='continue':
+        if options.directory=='auto':
+            raise(Exception('target continue cannot work with automatic directory'))
+        if not os.path.exists(result_path + 'num.npz'):
+            raise(Exception('num.npz not found, target continue requires it to run'))
+        summary = np.load(result_path+'num.npz')
+        saved_options = summary['options']
+        options = saved_options[()]
+        target = 'all'
+
     sid = options.seq_id
     sid2 = options.search_seq_id
     proj_dim = options.proj_dim
@@ -372,21 +393,7 @@ if __name__ == '__main__':
     num_neighbors = options.num_neighbors
     metric = options.metric
     file_name = options.file_name
-    target = options.target
-    # if target is to continue do the all target, but load the options from the file
-    if target=='continue':
-        if options.directory=='auto':
-            raise(Exception('target continue cannot work with automatic directory'))
-        target = 'all';
 
-    if options.directory=='auto':
-        RESULT_DIR = file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').replace('.','_')
-    elif options.directory=='exp':
-        RESULT_DIR = 'experimental/' + file_name
-    else:
-        RESULT_DIR = options.directory
-
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
     job_paths = {'clean':result_path, 
             'build': index_path,
             'search' : search_path,
@@ -406,18 +413,6 @@ if __name__ == '__main__':
     if target=='all':
         summary = np.load(result_path+'num.npz')
         N = summary['N']
-        if options.target=='continue':
-            saved_options = summary['options']
-            proj_dim = saved_options.proj_dim
-            k_small = saved_options.small_k 
-            k_big = saved_options.big_k
-            num_trees = saved_options.num_trees
-            step_build = saved_options.step_build
-            step_search = saved_options.step_search
-            num_neighbors = saved_options.num_neighbors
-            metric = saved_options.metric
-            file_name = saved_options.file_name
-            options = saved_options
 
         jobs_dep = dict()
 
