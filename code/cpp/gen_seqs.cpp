@@ -4,13 +4,55 @@
 #include <ctime>
 #include <random>
 #include <vector>
-#include <tuple>
-using namespace std;
+#include <fstream>
+//using namespace std;
+using std::cout;
+using std::endl;
+using std::vector; 
+using std::string;
+
+
+#include <cstdlib>
+class config {
+public:
+    std::string home_dir,
+                project_dir,
+                config_path,
+                result_path,
+                data_path, 
+                index_path,
+                search_path,
+                eval_path,
+                log_path;
+    void load_proj_dir() {
+        home_dir = std::getenv("HOME");
+        config_path = home_dir + "/.config_string_embedding";
+        std::ifstream fc(config_path);
+        if (! fc) {
+            std::cerr << " can't open the config file " << endl;
+            exit(1);
+        }
+        string line;
+        while (std::getline(fc, line)) {
+            cout << " line = " << line << endl;
+            if ( line.find("PROJ_DIR") != std::string::npos) {
+                project_dir = string(line.begin() + line.find("=") + 1, line.end());
+                cout << " PROJ_DIR = " << project_dir << endl;
+            }
+        }
+    }
+    config(std::string file_name, std::string result_dir) {
+        load_proj_dir();
+    }
+    config(std::string file_name) {
+        load_proj_dir();
+    }
+};
 
 
 
 struct seq_options {
-    bool check_arg(char* str, std::string name1, std::string name2) {
+    bool check_arg(char* str, string name1, string name2) {
         if (name1.compare(str)==0 or name2.compare(str)==0)
             return true;
         else
@@ -22,8 +64,11 @@ public:
         padding = 200, num_seq = 5, num_seq2 = -1,repeat = 2;
     bool colored = false, print_values = false, print_seqs = false;
     string save_directory = "tmp.fa";
+    
 
     void read_args(int argc, char* argv[]) {
+        using std::stoi;
+        using std::stof;
         for (int i=1; i<argc; i++) {
             if (check_arg(argv[i],"-m", "--mutation-rate")) {
                 mutation_rate = stof(argv[++i]);
@@ -67,7 +112,7 @@ public:
             if (check_arg(argv[i],"-d", "--save-directory")) {
                 save_directory = string(argv[++i]);
             } else {
-                std::cout << "illegal argument " << argv[i] << std::endl;
+                std::cerr << "illegal argument " << argv[i] << std::endl;
             } 
         }
         // if not provided they default to the other value
@@ -78,8 +123,8 @@ public:
     }
 };
 
-std::string vec2str(std::vector<char> &vec) {
-    std::string str(vec.begin(), vec.end());
+string vec2str(vector<char> &vec) {
+    string str(vec.begin(), vec.end());
     return str;
 }
 
@@ -102,21 +147,21 @@ vector<int> rand_vect(int min, int max, int size) {
 
 
 
-void rand_seq(vector<char> &seq,string Sigma, int len) {
+void rand_seq(vector<char> &seq, string Sigma, int len) {
     int sigma = Sigma.length();
     for (int i=0; i<len; i++) 
         seq.push_back( Sigma[rand_int(sigma)] );
 }
 
-vector<char> rand_seq(std::string Sigma, int len) {
-    std::vector<char> vec;
+vector<char> rand_seq(string Sigma, int len) {
+    vector<char> vec;
     vec.reserve(len);
     rand_seq(vec, Sigma, len);
     return vec;
 }
 
 
-int  mutate_seq(std::vector<char> &seq, std::vector<char> &seq2, seq_options &opts, std::string Sigma) {
+int  mutate_seq(vector<char> &seq, vector<char> &seq2, seq_options &opts, string Sigma) {
     std::default_random_engine gen;
     std::geometric_distribution<int> db(opts.geometric_p);
     int i = 0;
@@ -154,7 +199,7 @@ int  mutate_seq(std::vector<char> &seq, std::vector<char> &seq2, seq_options &op
     return seq2.size() - init_size;
 }
 
-std::vector<char> mutate_seq(std::vector<char> &seq, seq_options &opts, std::string Sigma) {
+vector<char> mutate_seq(vector<char> &seq, seq_options &opts, string Sigma) {
     vector<char> seq2;
     mutate_seq(seq, seq2, opts, Sigma);
 }
@@ -167,7 +212,10 @@ public:
 };
 
 
-void generate_seqs(vector<vector<char>>  &seqs, vector<vector<int> > &vals, vector<vector< gene_interval> > &all_intervals, seq_options &opt) {
+void generate_seqs(vector<vector<char> >  &seqs, 
+                   vector<vector<int> > &vals, 
+                   vector<vector< gene_interval> > &all_intervals, 
+                   seq_options &opt) {
     string Sigma = "acgt";
     auto gene_lens = rand_vect(opt.gene_len, opt.gene_len2+1, opt.num_genes);
     auto num_seqs = rand_vect(opt.num_seq, opt.num_seq2+1, opt.repeat);
@@ -218,16 +266,15 @@ int main(int argc, char* argv[] )
     vector<vector<char> > seqs;
     vector<vector<int> > vals;
     generate_seqs(seqs, vals, all_intervals, opt);
+    cout << "save directoyr = " << opt.save_directory << endl; 
+    config conf(opt.save_directory);
 
     for (int i=0; i<seqs.size() ; i++) {
         auto str = vec2str(seqs[i]);
-  //      cout << " seq "  << i <<  " : " << endl;
         cout << str << endl;
-  //      for (int j=0; j<vals[i].size(); j++)
-  //          if (vals[i][j]>0)
- //               cout << vals[i][j];
-                //cout << str[i][j];
-//        cout << endl;
+        for (int j=0; j<vals[i].size(); j++)
+                cout << vals[i][j];
+        cout << endl;
     }
 
     return 0;
