@@ -11,7 +11,8 @@ import utility
 reload(utility)
 
 # set the directory where the sequence data is located
-PROJ_DIR = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
+#PROJ_DIR = '/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic'
+PROJ_DIR = utility.proj_dir()
 RESULT_DIR = '__UNASSIGNED__'
 
 def load_paths(file_name):

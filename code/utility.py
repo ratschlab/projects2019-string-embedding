@@ -1,11 +1,28 @@
 from collections import Counter
 import numpy as np
 import select
-import sys
+import sys, os
 import argparse
 from tqdm import tqdm
 import time
 from annoy import AnnoyIndex
+
+
+def proj_dir():
+    try:
+        home_dir = os.path.expanduser('~')   
+        f = open(home_dir + '/.config_string_embedding', 'r')
+        lines = f.readlines()
+        for i in range(len(lines)):
+            L = lines[i].split('=')
+            print('L[0] = ', L[0], " len(L) = ", len(L)) 
+            print(' to equalities= ' ,  'PROJ_DIR' in L[0],  len(L) ==2) 
+            if 'PROJ_DIR' in L[0] and len(L) ==2:
+                return L[1].strip()
+        raise(Exception('could not find the project directory'))
+    except:
+        raise(Exception("can't open the project config file"))
+
 
 
 def get_kmver_vals(s_kmer_vals, k_big):
