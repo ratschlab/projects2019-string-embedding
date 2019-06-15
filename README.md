@@ -8,7 +8,7 @@ For the c++ codes, they have to be compiled with `c++14`, but preferably `c++17`
 
 # config file
 
-put a folder named `.config_string_embedding` in your home  directory that contains the path to the project data directory under the variable `PROJ_DIR`. Currently the data is located on the cluster at "/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic" and so the config file should look like:
+put a folder named `.config_string_embedding` in your home  directory that contains the path to the project data directory under the variable `PROJ_DIR`. Currently the data is located on the cluster at `/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic" and so the config file should look like`
 
 `PROJ_DIR = /cluster/work/grlab/projects/projecs2019-string-embedding/synthetic`
 
