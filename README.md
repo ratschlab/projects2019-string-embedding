@@ -2,7 +2,7 @@
 This project contains codes that simulate simple whole-genome evolution, and several analysis methods to find the MSA blocks.
 
 # requirements to run the python codes
-The python code must be run by Python 3.6+. The packages required are `shutil`, `annoy`, and `flann`, which all can be installed by conda. 
+The python code must be run by Python 3.6+. The packages required are `shutil`, `annoy`, `tqdm`, and `flann`, which all can be installed by conda. 
 
 # config file
 
