@@ -360,6 +360,7 @@ if __name__ == '__main__':
     parser.add_option('-T','--time',dest='time', default = 4, type='int', help = 'designated hours for each process ')
     parser.add_option('-v','--verbose',dest='verbose', default = 2, type='int', help = ' level of verbosity (0,1, & 2) ')
     parser.add_option('-d','--directory',dest='directory', default = 'exp', type='str', help = ' directory for results (exp: save in experimental, auto: create new dir) ')
+    parser.add_option('-r','--random-seed',dest='random_seed', default = 'exp', type='int', help = ' directory for results (exp: save in experimental, auto: create new dir) ')
     (options, args) = parser.parse_args()
 
     # set the result directory based on options.directory
@@ -511,7 +512,7 @@ if __name__ == '__main__':
         kmer_vals = utility.get_kmver_vals(s_kmer_vals, k_big)
         build_indices = np.arange(0,len(kmers),step_build)
 
-        convolved = utility.random_projection(kmers, k_big, proj_dim)
+        convolved = utility.random_projection(kmers, k_big, proj_dim, options.random_seed)
         np.savez(npz_path+'data'+str(sid)+'.npz', 
                  convolved=convolved, 
                  num_seqs = num_seqs,
