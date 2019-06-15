@@ -4,6 +4,8 @@ This project contains codes that simulate simple whole-genome evolution, and sev
 # requirements to run the python codes
 The python code must be run by Python 3.6+. The packages required are `shutil`, `annoy`, `tqdm`, and `flann`, which all can be installed by conda. 
 
+For the c++ codes, they have to be compiled with `c++14`, but preferably `c++17` in case of future code written with the updated standards. 
+
 # config file
 
 put a folder named ".config_string_embedding" in your home  directory that contains the path to the project data directory under the variable `PROJ_DIR`. Currently the data is located on the cluster at "/cluster/work/grlab/projects/projecs2019-string-embedding/synthetic" and so the config file should look like:
