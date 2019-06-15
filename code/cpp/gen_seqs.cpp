@@ -5,17 +5,27 @@
 #include <random>
 #include <vector>
 #include <fstream>
-//using namespace std;
+#include <sys/stat.h>
+#include <algorithm>
 using std::cout;
 using std::endl;
 using std::vector; 
 using std::string;
 
 
+int make_directory(std::string path) {
+    cout << " path =  "<< path << endl;
+    int out = mkdir(path.c_str(), S_IRWXU);
+    return out;
+}
+
+
 #include <cstdlib>
 class config {
 public:
-    std::string home_dir,
+    std::string file_name,
+                fasta_file, val_file, maf_file,
+                home_dir,
                 project_dir,
                 config_path,
                 result_path,
@@ -37,14 +47,25 @@ public:
             cout << " line = " << line << endl;
             if ( line.find("PROJ_DIR") != std::string::npos) {
                 project_dir = string(line.begin() + line.find("=") + 1, line.end());
+                int c = 0;
+                while ( project_dir[c]==' ')
+                    c ++;
+                project_dir = string(project_dir.begin() + c, project_dir.end());
                 cout << " PROJ_DIR = " << project_dir << endl;
+                data_path = project_dir + "/data/fasta/" + file_name;
+                fasta_file = data_path + "/seqs.fa";
+                val_file = data_path + "/seqs.val";
+                maf_file = data_path + "/seqs.maf";
+                return;
             }
         }
+        std::cerr << " couldn't find PROJ_DIR in the config file " << std::endl;
+        exit(1);
     }
-    config(std::string file_name, std::string result_dir) {
+    config(std::string file_name, std::string result_dir) : file_name(file_name) {
         load_proj_dir();
     }
-    config(std::string file_name) {
+    config(std::string file_name) : file_name(file_name)  {
         load_proj_dir();
     }
 };
@@ -63,7 +84,7 @@ public:
     int gene_len = 100, gene_len2 = -1 , num_genes = 5, 
         padding = 200, num_seq = 5, num_seq2 = -1,repeat = 2;
     bool colored = false, print_values = false, print_seqs = false;
-    string save_directory = "tmp.fa";
+    string file_name = "tmp";
     
 
     void read_args(int argc, char* argv[]) {
@@ -109,8 +130,8 @@ public:
             if (check_arg(argv[i],"-p", "--print-seqs")) {
                 print_seqs = true;
             } else 
-            if (check_arg(argv[i],"-d", "--save-directory")) {
-                save_directory = string(argv[++i]);
+            if (check_arg(argv[i],"-f", "--file-name")) {
+                file_name = string(argv[++i]);
             } else {
                 std::cerr << "illegal argument " << argv[i] << std::endl;
             } 
@@ -161,7 +182,7 @@ vector<char> rand_seq(string Sigma, int len) {
 }
 
 
-int  mutate_seq(vector<char> &seq, vector<char> &seq2, seq_options &opts, string Sigma) {
+int  mutate_seq(vector<char> &seq, vector<int> &val, vector<char> &seq2, vector<int> &val2, seq_options &opts, string Sigma) {
     std::default_random_engine gen;
     std::geometric_distribution<int> db(opts.geometric_p);
     int i = 0;
@@ -180,11 +201,13 @@ int  mutate_seq(vector<char> &seq, vector<char> &seq2, seq_options &opts, string
                 // subsitutde
                 if (ri==0) {
                     seq2.push_back(Sigma[rand_int(4)]);
+                    val2.push_back(0);
                     i++ ;
                 } 
                 // insert
                 else if (ri==1) {
                     seq2.push_back(Sigma[rand_int(4)]);
+                    val2.push_back(0);
                 } 
                 // delete
                 else if (ri==2) { 
@@ -193,16 +216,20 @@ int  mutate_seq(vector<char> &seq, vector<char> &seq2, seq_options &opts, string
             }
         } else {
             seq2.push_back(seq[i]);
+            val2.push_back(val[i]);
             i++;
         }
     }
     return seq2.size() - init_size;
 }
 
-vector<char> mutate_seq(vector<char> &seq, seq_options &opts, string Sigma) {
+/*
+vector<char> mutate_seq(vector<char> &seq, vector<int> &val, seq_options &opts, string Sigma) {
     vector<char> seq2;
     mutate_seq(seq, seq2, opts, Sigma);
+    return seq2;
 }
+*/
 
 
 struct gene_interval {
@@ -222,9 +249,21 @@ void generate_seqs(vector<vector<char> >  &seqs,
     
     for (int ri=0; ri< opt.repeat; ri++) {
         vector<vector<char> > genes;
+        vector<vector<int> > gene_vals(opt.num_genes, vector<int> ());
         for (int k=0; k<opt.num_genes; k++) {
             genes.push_back(rand_seq(Sigma, gene_lens[k]));
+            gene_vals[k].resize(gene_lens[k]);
+            std::iota(gene_vals[k].begin(), gene_vals[k].end(), 1);
         }
+        cout << " gene_vals = " << endl;
+        for (int k=0; k<opt.num_genes; k++) {
+            for (int l=0; l<gene_lens[k]; l++) {
+                cout << gene_vals[k][l];
+            }
+            cout << endl;
+        }
+        cout << " ******* " << endl;
+
         for (int i=0; i<num_seqs[ri]; i++) {
             vector<char> seq;
             vector<int> val;
@@ -238,12 +277,12 @@ void generate_seqs(vector<vector<char> >  &seqs,
                 if (i==0) {
                     seq.insert(seq.end(), genes[k].begin(), genes[k].end());
                     gene_len = gene_lens[k];
+                    val.insert(val.end(), gene_vals[k].begin(), gene_vals[k].end());
                 } else {
-                    gene_len = mutate_seq(genes[k], seq,  opt, Sigma); 
+                    gene_len = mutate_seq(genes[k], gene_vals[k],  seq, val,  opt, Sigma); 
                 }
                 int end = seq.size();
                 gene_interval_vec.push_back(gene_interval(gene_code, begin, end));
-                val.insert(val.end(), gene_len, gene_code);
                 rand_seq(seq, Sigma, opt.padding);
                 val.insert(val.end(), opt.padding, 0); 
 
@@ -257,6 +296,8 @@ void generate_seqs(vector<vector<char> >  &seqs,
 }
 
 
+
+
 int main(int argc, char* argv[] ) 
 {
     std::srand(std::time(nullptr)); // use current time as seed for random generator
@@ -266,8 +307,14 @@ int main(int argc, char* argv[] )
     vector<vector<char> > seqs;
     vector<vector<int> > vals;
     generate_seqs(seqs, vals, all_intervals, opt);
-    cout << "save directoyr = " << opt.save_directory << endl; 
-    config conf(opt.save_directory);
+    config conf(opt.file_name);
+    make_directory(conf.data_path);
+    std::ofstream ffasta, fvals, fmaf;
+    ffasta.open (conf.fasta_file);
+    fmaf.open (conf.maf_file);
+    ffasta << " test " << endl;
+    fmaf << " test " << endl;
+    //fvals.open (conf.val_file);
 
     for (int i=0; i<seqs.size() ; i++) {
         auto str = vec2str(seqs[i]);
@@ -276,6 +323,8 @@ int main(int argc, char* argv[] )
                 cout << vals[i][j];
         cout << endl;
     }
+    ffasta.close();
+    fmaf.close();
 
     return 0;
 }
