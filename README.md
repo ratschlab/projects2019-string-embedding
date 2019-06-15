@@ -1,6 +1,17 @@
 # projects2019-string-embedding
 This project contains codes that simulate simple whole-genome evolution, and several analysis methods to find the MSA blocks.
 
+The overal organization of the code is as follows:
+- `$(HOME)/.config_string_embedding`: config file of the project, specifying `PROJECT_DIR`
+- code
+  - python: *.py files for sequence genration, string embedding, and KNN search
+  - cpp: *.cpp files for sequence genration and Ordered-LSH (in progress)
+- data: sample data for unit testing
+- `$(PROJ_DIR)`
+  - data
+  - results 
+
+
 # requirements to run the python codes
 The python code must be run by Python 3.6+. The packages required are `numpy, shutil, annoy, tqdm`, and `flann`, which all can be installed by conda. 
 
