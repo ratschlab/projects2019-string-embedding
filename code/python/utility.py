@@ -15,8 +15,6 @@ def proj_dir():
         lines = f.readlines()
         for i in range(len(lines)):
             L = lines[i].split('=')
-            print('L[0] = ', L[0], " len(L) = ", len(L)) 
-            print(' to equalities= ' ,  'PROJ_DIR' in L[0],  len(L) ==2) 
             if 'PROJ_DIR' in L[0] and len(L) ==2:
                 return L[1].strip()
         raise(Exception('could not find the project directory'))
