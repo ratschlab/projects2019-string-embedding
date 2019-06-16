@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <algorithm>
+#include <map>
 using std::cout;
 using std::endl;
 using std::vector; 
@@ -14,17 +15,15 @@ using std::string;
 
 
 int make_directory(std::string path) {
-    cout << " path =  "<< path << endl;
     int out = mkdir(path.c_str(), S_IRWXU);
     return out;
 }
 
 
-#include <cstdlib>
 class config {
-public:
-    std::string file_name,
-                fasta_file, val_file, maf_file,
+public: std::string file_name,
+                maf_file,
+                data_command, 
                 home_dir,
                 project_dir,
                 config_path,
@@ -44,7 +43,6 @@ public:
         }
         string line;
         while (std::getline(fc, line)) {
-            cout << " line = " << line << endl;
             if ( line.find("PROJ_DIR") != std::string::npos) {
                 project_dir = string(line.begin() + line.find("=") + 1, line.end());
                 int c = 0;
@@ -53,15 +51,21 @@ public:
                 project_dir = string(project_dir.begin() + c, project_dir.end());
                 cout << " PROJ_DIR = " << project_dir << endl;
                 data_path = project_dir + "/data/fasta/" + file_name;
-                fasta_file = data_path + "/seqs.fa";
-                val_file = data_path + "/seqs.val";
-                maf_file = data_path + "/seqs.maf";
+                data_command = data_path + "/command.sh";
+                maf_file = data_path + "/MSA.maf";
                 return;
             }
         }
         std::cerr << " couldn't find PROJ_DIR in the config file " << std::endl;
         exit(1);
     }
+    string fasta_file(int i) {
+        return data_path + "/seqs" + std::to_string(i) + ".fa";
+    }
+    string val_file(int i) {
+        return data_path + "/vals" + std::to_string(i) + ".bin";
+    } 
+
     config(std::string file_name, std::string result_dir) : file_name(file_name) {
         load_proj_dir();
     }
@@ -152,6 +156,7 @@ string vec2str(vector<char> &vec) {
 
 int rand_int(int min, int max) {
     int rv = std::rand();
+    int RV = rv;
     return min + rv% (max - min); 
 }
 
@@ -193,15 +198,19 @@ int  mutate_seq(vector<char> &seq, vector<int> &val, vector<char> &seq2, vector<
             // choose randomly between in/del/sub
             int ri = rand_int(3);         
             // if we've reached the seq end, only insert is possible
-            int rounds = db(gen);
+            int rounds = db(gen) + 1;
             for (int r = 0; r<rounds; r++) {
                 if (i==seq.size()) {
                     ri = 1; 
                 } 
                 // subsitutde
                 if (ri==0) {
+                    char c = Sigma[rand_int(4)];
                     seq2.push_back(Sigma[rand_int(4)]);
-                    val2.push_back(0);
+                    if (seq2.back() != seq[i])
+                        val2.push_back(0);
+                    else 
+                        val2.push_back(val[i]);
                     i++ ;
                 } 
                 // insert
@@ -223,19 +232,13 @@ int  mutate_seq(vector<char> &seq, vector<int> &val, vector<char> &seq2, vector<
     return seq2.size() - init_size;
 }
 
-/*
-vector<char> mutate_seq(vector<char> &seq, vector<int> &val, seq_options &opts, string Sigma) {
-    vector<char> seq2;
-    mutate_seq(seq, seq2, opts, Sigma);
-    return seq2;
-}
-*/
 
 
 struct gene_interval {
 public:
-    int gene_code, begin, end;
-    gene_interval(int g, int b, int e ) : gene_code(g), begin(b), end(e) {}
+    int gene_code, begin, end, seq_num;
+    gene_interval(int g, int b, int e , int sn) : gene_code(g), begin(b), end(e), seq_num(sn) {}
+    gene_interval() {}
 };
 
 
@@ -247,6 +250,7 @@ void generate_seqs(vector<vector<char> >  &seqs,
     auto gene_lens = rand_vect(opt.gene_len, opt.gene_len2+1, opt.num_genes);
     auto num_seqs = rand_vect(opt.num_seq, opt.num_seq2+1, opt.repeat);
     
+    int seq_num = 0;
     for (int ri=0; ri< opt.repeat; ri++) {
         vector<vector<char> > genes;
         vector<vector<int> > gene_vals(opt.num_genes, vector<int> ());
@@ -255,14 +259,6 @@ void generate_seqs(vector<vector<char> >  &seqs,
             gene_vals[k].resize(gene_lens[k]);
             std::iota(gene_vals[k].begin(), gene_vals[k].end(), 1);
         }
-        cout << " gene_vals = " << endl;
-        for (int k=0; k<opt.num_genes; k++) {
-            for (int l=0; l<gene_lens[k]; l++) {
-                cout << gene_vals[k][l];
-            }
-            cout << endl;
-        }
-        cout << " ******* " << endl;
 
         for (int i=0; i<num_seqs[ri]; i++) {
             vector<char> seq;
@@ -282,7 +278,7 @@ void generate_seqs(vector<vector<char> >  &seqs,
                     gene_len = mutate_seq(genes[k], gene_vals[k],  seq, val,  opt, Sigma); 
                 }
                 int end = seq.size();
-                gene_interval_vec.push_back(gene_interval(gene_code, begin, end));
+                gene_interval_vec.push_back(gene_interval(gene_code, begin, end, seq_num));
                 rand_seq(seq, Sigma, opt.padding);
                 val.insert(val.end(), opt.padding, 0); 
 
@@ -290,11 +286,50 @@ void generate_seqs(vector<vector<char> >  &seqs,
             seqs.push_back(seq);
             vals.push_back(val);
             all_intervals.push_back(gene_interval_vec);
+            seq_num ++;
         }
 
     }
 }
 
+struct maf_blocks {
+public:
+    vector<vector<char> > &seqs;
+    vector<vector<int> > &vals;
+    vector<vector<gene_interval> > &intervals;
+    std::ofstream &fmaf; 
+    std::map< int , vector< gene_interval > > map;
+    
+    maf_blocks(vector<vector<char> > &seqs, vector<vector<int> > &vals, 
+                vector< vector< gene_interval> > &intervals, 
+                std::ofstream &fmaf ) 
+                       : seqs(seqs), vals(vals), intervals(intervals), fmaf(fmaf) {
+         int N = intervals.size(); 
+         for (auto seq_intervals : intervals) {
+             for (auto Inter : seq_intervals) {
+                 int gc = Inter.gene_code;
+                 if (map.count(gc)==0) 
+                     map[gc] = vector< gene_interval > ();
+                 map[gc].push_back( Inter );
+             }
+         }
+
+         int count = 0;
+         fmaf << " ##maf   score = zero "  << endl;
+         for (auto it : map ) {
+            int gc = it.first;
+            fmaf << "a " << count << " score = 0 "  << " g " << gc << endl;
+            for (auto Inter : it.second ) {
+                int sn = Inter.seq_num, b = Inter.begin, e = Inter.end;
+
+                std::string str ( seqs[sn].begin()+b, seqs[sn].begin()+e);
+                fmaf << "s seq" << sn << " " << b << " + " << (e-b) 
+                    << "    " << str << endl;
+            }
+            count++;
+         }
+    } 
+};
 
 
 
@@ -303,27 +338,35 @@ int main(int argc, char* argv[] )
     std::srand(std::time(nullptr)); // use current time as seed for random generator
     seq_options opt; 
     opt.read_args(argc, argv);
+    config conf(opt.file_name);
+
     vector<vector<gene_interval> > all_intervals;
     vector<vector<char> > seqs;
     vector<vector<int> > vals;
     generate_seqs(seqs, vals, all_intervals, opt);
-    config conf(opt.file_name);
     make_directory(conf.data_path);
-    std::ofstream ffasta, fvals, fmaf;
-    ffasta.open (conf.fasta_file);
-    fmaf.open (conf.maf_file);
-    ffasta << " test " << endl;
-    fmaf << " test " << endl;
-    //fvals.open (conf.val_file);
+    std::ofstream ffasta; 
 
     for (int i=0; i<seqs.size() ; i++) {
+        ffasta.open (conf.fasta_file(i));
+
         auto str = vec2str(seqs[i]);
-        cout << str << endl;
-        for (int j=0; j<vals[i].size(); j++)
-                cout << vals[i][j];
-        cout << endl;
+        ffasta << " >> " << opt.file_name << ".seq." << i << endl;
+        ffasta << str << endl; 
+        ffasta.close();
     }
-    ffasta.close();
+
+    std::ofstream fmaf; 
+    fmaf.open (conf.maf_file);
+    fmaf << "s" <<  "\tg" <<  "\ts" << "\tl" << endl ;  
+    
+    for (int i=0; i<seqs.size() ; i++) {
+        for (auto Inter : all_intervals[i]) {
+            fmaf << i << "\t" << (Inter.gene_code) << "\t" << (Inter.begin) << "\t" << (Inter.end - Inter.begin) << endl;  
+        }
+    }
+    fmaf << "===" << endl;
+    maf_blocks mb(seqs, vals, all_intervals, fmaf);
     fmaf.close();
 
     return 0;
