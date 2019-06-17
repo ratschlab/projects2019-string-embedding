@@ -3,9 +3,9 @@ This project contains codes that simulate simple whole-genome evolution, and sev
 
 The overal organization of the code is as follows:
 - `$(HOME)/.config_string_embedding`: config file of the project, specifying `PROJECT_DIR`
-- code
+- code: The python codes are mostly for prototyping and eventually all the codes must run natively in C++ (in progress).
   - python: *.py files for sequence genration, string embedding, and KNN search
-  - cpp: *.cpp files for sequence genration and Ordered-LSH (in progress)
+  - cpp: *.cpp files for sequence genration  (in progress)
 - data: sample data for unit testing
 - `$(PROJ_DIR)`
   - data
@@ -17,7 +17,6 @@ The python code must be run by Python 3.6+. The packages required are `numpy, sh
 
 For the c++ codes, the code has been compiled and tested with `-std=c++17` standards. 
 
-The python codes are mostly for prototyping and eventually all the codes must run natively in C++ (in progress).
 
 # config file
 
