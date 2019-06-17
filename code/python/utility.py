@@ -8,6 +8,7 @@ from tqdm import tqdm
 import time
 from annoy import AnnoyIndex
 from attrdict import AttrDict
+import fasta_read as fasta
 
 
 
@@ -26,9 +27,12 @@ def proj_dir():
 
 
 
-def load_paths(file_name, result_dir):
+def load_paths(file_name, result_dir, read_fasta = False):
     PROJ_DIR = proj_dir()
-    data_path = PROJ_DIR + '/data/' + file_name + '.npz'
+    if read_fasta:
+        data_path = PROJ_DIR + '/data/fasta/' + file_name + '/' 
+    else:
+        data_path = PROJ_DIR + '/data/' + file_name + '.npz'
     result_path = PROJ_DIR + '/results/' + result_dir +  '/'   
     index_path = result_path + 'index/'
     search_path = result_path + 'search/'
@@ -43,8 +47,9 @@ def load_paths(file_name, result_dir):
 
     return data_path, result_path, index_path, search_path, eval_path, npz_path, log_path
 
-def load_files(file_name, result_dir, clean):
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name, result_dir)
+def load_files(file_name, result_dir, clean, fasta_file_id = -1):
+    read_fasta = (fasta_file_id >= 0)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name, result_dir, read_fasta)
     paths = (result_path, index_path, search_path, npz_path, eval_path, log_path)
 
     if clean==True:
@@ -57,22 +62,33 @@ def load_files(file_name, result_dir, clean):
         if not os.path.exists(p):
             os.makedirs(p)
 
-    Res = np.load(data_path)
-    seqs = Res['seqs']
-    vals = Res['vals']
-    options = Res['options']
-    Op = (options[()])
-    if isinstance(Op,dict):
-        Op = AttrDict(Op)
-    if int(file_name[4:])>=7:
-        gene_lens = Res['gene_lens']
-        num_seqs = Res['num_seqs']
+    if read_fasta:
+        seq, val  = fasta.load_seqs_vals(file_name, fasta_file_id)
+        options = fasta.load_options(file_name)
+        num_seqs = options['num_seqs']
+        Op = AttrDict(options)
+        seqs = [seq]
+        vals = [val]
+
     else:
-        num_seqs = [Op.num_seq]*Op.repeat
-    print('num seqs = ', len(seqs), ' mean lenth of seqs = ', np.mean([len(seqs[i]) for i in range(len(seqs))]))
-    print(Op)
+        Res = np.load(data_path)
+        seqs = Res['seqs']
+        vals = Res['vals']
+        options = Res['options']
+        Op = (options[()])
+        if isinstance(Op,dict):
+            Op = AttrDict(Op)
+        if int(file_name[4:])>=7:
+            gene_lens = Res['gene_lens']
+            num_seqs = Res['num_seqs']
+        else:
+            num_seqs = [Op.num_seq]*Op.repeat
+        print('num seqs = ', len(seqs), ' mean lenth of seqs = ', np.mean([len(seqs[i]) for i in range(len(seqs))]))
+        print(Op)
     
     return seqs, vals, num_seqs, options, Op
+
+
 
 
 

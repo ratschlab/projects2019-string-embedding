@@ -260,6 +260,9 @@ string generate_seqs(vector<vector<char> >  &seqs,
     ss << endl << "gene_lens: "; 
     for (int i=0; i<gene_lens.size(); i++)
         ss << gene_lens[i] << " ";
+    ss << endl << "seq_lens: ";
+    for (int i=0; i<seqs.size(); i++)
+        ss << seqs[i].size() << " ";
     return ss.str();
 }
 

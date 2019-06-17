@@ -17,11 +17,16 @@ RESULT_DIR = '__UNASSIGNED__'
 
 
 def get_summary(file_name, options):
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(file_name, RESULT_DIR)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(file_name, RESULT_DIR, options.read_fasta)
     if not os.path.exists(result_path + 'num.npz'):
-        seqs, vals, num_seqs, opts, Op = utility.load_files(file_name, RESULT_DIR, clean=False)
-        seq_lens = [len(seqs[i]) for i in range(len(seqs))]
-        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op.__dict__, seq_lens = seq_lens)
+        seqs, vals, num_seqs, opts, Op = utility.load_files(file_name, RESULT_DIR, clean=False, fasta_file_id = options.fasta_file_index)
+        if options.read_fasta:
+            seq_lens = opts['seq_lens']
+            N = opts['N'] 
+        else:
+            seq_lens = [len(seqs[i]) for i in range(len(seqs))]
+        print('options saved in get_summary = ', options)
+        np.savez(result_path+'num.npz', N=len(seq_lens), num_seqs = num_seqs, options = options, Op = Op.__dict__, seq_lens = seq_lens)
     # check if the main parameters are consistent with the previous run
     # if target is clean, it doesn't matter, 
     # if it's continue, options will be replaced by the previous ones
@@ -65,7 +70,7 @@ def gen_job_args(job):
 # generate the full bsub command based on job and resources 
 # resources default to options defaults if not provided
 def get_bsub_cmd(job, options, mem = -1, t = -1):
-    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR)
+    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR, options.read_fasta)
     # if not override, use options defaults
     if mem==-1:
         mem = options.memory
@@ -80,10 +85,12 @@ def get_bsub_cmd(job, options, mem = -1, t = -1):
 
     # add options, but remove args irrelevant to worker processes
     for k,v in options.__dict__.items():
-        if k not in ['target', 'seq_id', 'search_seq_id', 'target', 'forward_target', 'memory', 'time', 'directory']:
+        if k not in ['target', 'seq_id', 'search_seq_id', 'target', 'forward_target', 'memory', 'time', 'directory', 'read_fasta']:
             command = command + ' --' + k.replace('_','-') + ' ' + str(v)       
     # get argname from varname 
     command = command + ' --time ' + str(t) + ' --memory ' + str(mem) + ' --directory ' + RESULT_DIR
+    if options.read_fasta:
+        command = command + ' --read-fasta '
 
     # add job args to bsub and option args
     command = command + gen_job_args(job)      
@@ -108,7 +115,7 @@ def add_job(Map, job, deps):
     Map[job] = deps
 
 def run_jobs(jobs_flat, job_dep, options, job_paths):
-    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR)
+    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR, options.read_fasta)
     started = dict()
     for j in jobs_flat:
         started[j] = False
@@ -300,6 +307,8 @@ def find_killed_jobs(log_path, flog):
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-f','--file-name',dest='file_name', default = '', type='string', help = 'seq file to load')
+    parser.add_option('-I','--fasta-file-index',dest='fasta_file_index', default = -1, type='int', help = 'fasta file id to be loaded')
+    parser.add_option('-A','--read-fasta',dest='read_fasta', action='store_true', default = False,  help = 'read from fasta file')
     parser.add_option('-i','--seq-id',dest='seq_id', default = 0, type='int', help = 'seq id to build index for')
     parser.add_option('-j','--search-seq-id',dest='search_seq_id', default = 0, type='int', help = 'search sequence id')
     parser.add_option('-k','--small-k',dest='small_k', default = 3, type='int', help = 'small k to do kmer counting')
@@ -319,6 +328,10 @@ if __name__ == '__main__':
     parser.add_option('-r','--random-seed',dest='random_seed', default = '0', type='int', help = ' directory for results (exp: save in experimental, auto: create new dir) ')
     (options, args) = parser.parse_args()
 
+
+    if options.read_fasta:
+        options.fasta_file_index = options.seq_id
+
     # set the result directory based on options.directory
     if options.directory=='auto':
         RESULT_DIR = options.file_name + '_' + str(datetime.now()).replace('-','_').replace(':','_').replace(' ','_').replace('.','_')
@@ -327,7 +340,7 @@ if __name__ == '__main__':
     else:
         RESULT_DIR = options.directory
 
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(options.file_name, RESULT_DIR)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(options.file_name, RESULT_DIR, options.read_fasta)
     # if target is to continue do the all target, but load the options from the file
     target = options.target
     if options.target=='continue':
@@ -340,6 +353,7 @@ if __name__ == '__main__':
         summary = np.load(result_path+'num.npz')
         saved_options = summary['options']
         options = saved_options[()]
+        print('options in the continue target = ', options)
         target = 'all'
 
     sid = options.seq_id
@@ -415,6 +429,7 @@ if __name__ == '__main__':
         run_jobs(jobs_flat, jobs_dep, options, job_paths) 
 
     elif target=='final':
+        print('dummy', fout)
         pass
 
         
@@ -443,7 +458,7 @@ if __name__ == '__main__':
         if 'seq_lens' in summary.files:
             seq_lens = summary['seq_lens']
         else:
-            seqs, _, _, _, _ = utility.load_files(file_name, RESULT_DIR, clean=False)
+            seqs, _, _, _, _ = utility.load_files(file_name, RESULT_DIR, clean=False, fasta_file_id = options.fasta_file_index)
             seq_lens = [len(seqs[i]) for i in range(len(seqs))]
 
         print('\nMERGE RESULT ' + '-'*50, file=fout)
@@ -458,15 +473,19 @@ if __name__ == '__main__':
 
 
     elif target=='clean':
-        utility.load_files(file_name, RESULT_DIR, clean=True)
+        utility.load_files(file_name, RESULT_DIR, clean=True, fasta_file_id = options.fasta_file_index)
         #get_summary(file_name, options)
 
 
     elif target=='build':
     
-        seqs, vals, num_seqs, opts, Op  = utility.load_files(file_name, RESULT_DIR, clean=False)
-        kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
-                                                 k = k_small, addy = True, padding = int(k_big))
+        seqs, vals, num_seqs, opts, Op  = utility.load_files(file_name, RESULT_DIR, clean=False, fasta_file_id = options.fasta_file_index)
+        if options.read_fasta:
+            kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple(seqs, vals = vals,  
+                                                     k = k_small, addy = True, padding = int(k_big))
+        else:
+            kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
+                                                     k = k_small, addy = True, padding = int(k_big))
         kmer_vals = utility.get_kmver_vals(s_kmer_vals, k_big)
         build_indices = np.arange(0,len(kmers),step_build)
 
