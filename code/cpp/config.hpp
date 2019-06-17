@@ -23,6 +23,7 @@ int make_directory(std::string path) {
 class config {
 public: std::string file_name,
                 maf_file,
+                options_file,
                 data_command, 
                 home_dir,
                 project_dir,
@@ -53,6 +54,7 @@ public: std::string file_name,
                 data_path = project_dir + "/data/fasta/" + file_name;
                 data_command = data_path + "/command.sh";
                 maf_file = data_path + "/MSA.maf";
+                options_file = data_path + "/options.txt";
                 return;
             }
         }

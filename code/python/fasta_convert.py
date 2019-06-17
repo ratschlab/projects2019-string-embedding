@@ -2,9 +2,13 @@ import numpy as np
 import glob
 from attrdict import AttrDict
 import utility
+import sys
 
 if __name__ == '__main__':
-    file_name = 'data00'
+    print(sys.argv)
+
+    file_name = sys.argv[1]
+    print('file_name = ', file_name)
     proj_dir = utility.proj_dir() + '/data/fasta/'
     datadir = proj_dir + file_name
 
