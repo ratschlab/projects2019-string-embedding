@@ -2,10 +2,13 @@ from collections import Counter
 import numpy as np
 import select
 import sys, os
+import shutil
 import argparse
 from tqdm import tqdm
 import time
 from annoy import AnnoyIndex
+from attrdict import AttrDict
+
 
 
 def proj_dir():
@@ -20,6 +23,58 @@ def proj_dir():
         raise(Exception('could not find the project directory'))
     except:
         raise(Exception("can't open the project config file"))
+
+
+
+def load_paths(file_name, result_dir):
+    PROJ_DIR = proj_dir()
+    data_path = PROJ_DIR + '/data/' + file_name + '.npz'
+    result_path = PROJ_DIR + '/results/' + result_dir +  '/'   
+    index_path = result_path + 'index/'
+    search_path = result_path + 'search/'
+    eval_path = result_path + 'eval/'
+    npz_path = result_path + 'npz/'
+    log_path = result_path + 'log/'
+
+    paths = (result_path, index_path, search_path, npz_path, eval_path, log_path)
+    for p in paths:
+        if not os.path.exists(p):
+            os.makedirs(p)
+
+    return data_path, result_path, index_path, search_path, eval_path, npz_path, log_path
+
+def load_files(file_name, result_dir, clean):
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name, result_dir)
+    paths = (result_path, index_path, search_path, npz_path, eval_path, log_path)
+
+    if clean==True:
+        if os.path.exists(result_path):
+            shutil.rmtree(result_path)
+        os.makedirs(result_path)
+        return
+
+    for p in paths:
+        if not os.path.exists(p):
+            os.makedirs(p)
+
+    Res = np.load(data_path)
+    seqs = Res['seqs']
+    vals = Res['vals']
+    options = Res['options']
+    Op = (options[()])
+    if isinstance(Op,dict):
+        Op = AttrDict(Op)
+    if int(file_name[4:])>=7:
+        gene_lens = Res['gene_lens']
+        num_seqs = Res['num_seqs']
+    else:
+        num_seqs = [Op.num_seq]*Op.repeat
+    print('num seqs = ', len(seqs), ' mean lenth of seqs = ', np.mean([len(seqs[i]) for i in range(len(seqs))]))
+    print(Op)
+    
+    return seqs, vals, num_seqs, options, Op
+
+
 
 
 
@@ -66,6 +121,8 @@ def eval_results(search_indices, NN, kmers, kmer_vals, kmer_pos, kmer_seq_id, nu
 #     quadrupples = sorted(quadrupples)
 #     [print(uquad[i],', ', cquad[i]) for i in range(len(uquad))]
     Op = (options[()])
+    if isinstance(Op,dict):
+        Op = AttrDict(Op)
     print('evaluation time = ', time.time()-t0) 
     print('folls possitive = ', (total_count - total_correct)/total_count)
     Total = 0
@@ -205,7 +262,7 @@ def list_kmers(seqs, vals = [],  k = 10,  to_sort = False, addx = True, addy = F
             kmers.append(S[i:i+k])
             val,freq = Counter(Val[i:i+k]).most_common(1)[0]
 
-            if val>0 and freq>k*.7:
+            if val>0 and freq>k*.5:
                 kmer_vals.append(val)
             else:
                 kmer_vals.append(0)

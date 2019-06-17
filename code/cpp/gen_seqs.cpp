@@ -8,71 +8,12 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <map>
+#include <sstream>
+#include "config.hpp"
 using std::cout;
 using std::endl;
 using std::vector; 
 using std::string;
-
-
-int make_directory(std::string path) {
-    int out = mkdir(path.c_str(), S_IRWXU);
-    return out;
-}
-
-
-class config {
-public: std::string file_name,
-                maf_file,
-                data_command, 
-                home_dir,
-                project_dir,
-                config_path,
-                result_path,
-                data_path, 
-                index_path,
-                search_path,
-                eval_path,
-                log_path;
-    void load_proj_dir() {
-        home_dir = std::getenv("HOME");
-        config_path = home_dir + "/.config_string_embedding";
-        std::ifstream fc(config_path);
-        if (! fc) {
-            std::cerr << " can't open the config file " << endl;
-            exit(1);
-        }
-        string line;
-        while (std::getline(fc, line)) {
-            if ( line.find("PROJ_DIR") != std::string::npos) {
-                project_dir = string(line.begin() + line.find("=") + 1, line.end());
-                int c = 0;
-                while ( project_dir[c]==' ')
-                    c ++;
-                project_dir = string(project_dir.begin() + c, project_dir.end());
-                cout << " PROJ_DIR = " << project_dir << endl;
-                data_path = project_dir + "/data/fasta/" + file_name;
-                data_command = data_path + "/command.sh";
-                maf_file = data_path + "/MSA.maf";
-                return;
-            }
-        }
-        std::cerr << " couldn't find PROJ_DIR in the config file " << std::endl;
-        exit(1);
-    }
-    string fasta_file(int i) {
-        return data_path + "/seqs" + std::to_string(i) + ".fa";
-    }
-    string val_file(int i) {
-        return data_path + "/vals" + std::to_string(i) + ".bin";
-    } 
-
-    config(std::string file_name, std::string result_dir) : file_name(file_name) {
-        load_proj_dir();
-    }
-    config(std::string file_name) : file_name(file_name)  {
-        load_proj_dir();
-    }
-};
 
 
 
@@ -145,6 +86,26 @@ public:
             num_seq2 = num_seq;
         if (gene_len2<0)
             gene_len2 = gene_len;
+    }
+
+    std::string to_string() {
+        std::stringstream ss;
+        ss << "seq_options = {" ;
+        ss << "mutation_rate " << mutation_rate << ", " 
+            << "gene_len " << gene_len << ", "
+            << "num_genes " << num_genes << ", "
+            << "padding " << padding << ", "
+            << "num_seq " << num_seq << ", "
+            << "repeat " << repeat << ", "
+            << "reverse_p " << reverse_p << ", "
+            << "gene_len2 " << gene_len2 << ", "
+            << "num_seq2 " << num_seq2 << ", "
+            << "geometric_p " << geometric_p << ", "
+            << "colored " << colored << ", "
+            << "print_values " << print_values << ", "
+            << "print_seqs " << print_seqs << ", "
+            << "file_name " << file_name << "}";
+        return ss.str();
     }
 };
 
@@ -242,7 +203,7 @@ public:
 };
 
 
-void generate_seqs(vector<vector<char> >  &seqs, 
+string generate_seqs(vector<vector<char> >  &seqs, 
                    vector<vector<int> > &vals, 
                    vector<vector< gene_interval> > &all_intervals, 
                    seq_options &opt) {
@@ -290,6 +251,16 @@ void generate_seqs(vector<vector<char> >  &seqs,
         }
 
     }
+
+    // serilize optioins
+    std::stringstream ss;
+    ss << "num_seqs: "; 
+    for (int i=0; i<num_seqs.size(); i++)
+        ss << num_seqs[i] << " ";
+    ss << endl << "gene_lens: "; 
+    for (int i=0; i<gene_lens.size(); i++)
+        ss << gene_lens[i] << " ";
+    return ss.str();
 }
 
 struct maf_blocks {
@@ -343,7 +314,7 @@ int main(int argc, char* argv[] )
     vector<vector<gene_interval> > all_intervals;
     vector<vector<char> > seqs;
     vector<vector<int> > vals;
-    generate_seqs(seqs, vals, all_intervals, opt);
+    string seq_opts = generate_seqs(seqs, vals, all_intervals, opt);
     make_directory(conf.data_path);
     std::ofstream ffasta; 
 
@@ -369,5 +340,15 @@ int main(int argc, char* argv[] )
     maf_blocks mb(seqs, vals, all_intervals, fmaf);
     fmaf.close();
 
+    // write options file
+    string opt_str = opt.to_string();
+
+    std::ofstream fo; 
+    fo.open (conf.options_file);
+    fo << "command: " << endl;
+    for (int i=0; i<argc; i++) 
+        fo << argv[i] << " " ;
+    fo << endl << seq_opts << endl << opt_str << endl;
+    fo.close();
     return 0;
 }

@@ -15,57 +15,13 @@ reload(utility)
 PROJ_DIR = utility.proj_dir()
 RESULT_DIR = '__UNASSIGNED__'
 
-def load_paths(file_name):
-    data_path = PROJ_DIR + '/data/' + file_name + '.npz'
-    result_path = PROJ_DIR + '/results/' + RESULT_DIR +  '/'   
-    index_path = result_path + 'index/'
-    search_path = result_path + 'search/'
-    eval_path = result_path + 'eval/'
-    npz_path = result_path + 'npz/'
-    log_path = result_path + 'log/'
-
-    paths = (result_path, index_path, search_path, npz_path, eval_path, log_path)
-    for p in paths:
-        if not os.path.exists(p):
-            os.makedirs(p)
-
-    return data_path, result_path, index_path, search_path, eval_path, npz_path, log_path
-
-def load_files(file_name, clean):
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
-    paths = (result_path, index_path, search_path, npz_path, eval_path, log_path)
-
-    if clean==True:
-        if os.path.exists(result_path):
-            shutil.rmtree(result_path)
-        os.makedirs(result_path)
-        return
-
-    for p in paths:
-        if not os.path.exists(p):
-            os.makedirs(p)
-
-    Res = np.load(data_path)
-    seqs = Res['seqs']
-    vals = Res['vals']
-    options = Res['options']
-    Op = (options[()])
-    if int(file_name[4:])>=7:
-        gene_lens = Res['gene_lens']
-        num_seqs = Res['num_seqs']
-    else:
-        num_seqs = [Op.num_seq]*Op.repeat
-    print('num seqs = ', len(seqs), ' mean lenth of seqs = ', np.mean([len(seqs[i]) for i in range(len(seqs))]))
-    print(Op)
-    
-    return seqs, vals, num_seqs, options, Op
 
 def get_summary(file_name, options):
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(file_name)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(file_name, RESULT_DIR)
     if not os.path.exists(result_path + 'num.npz'):
-        seqs, vals, num_seqs, opts, Op = load_files(file_name, clean=False)
+        seqs, vals, num_seqs, opts, Op = utility.load_files(file_name, RESULT_DIR, clean=False)
         seq_lens = [len(seqs[i]) for i in range(len(seqs))]
-        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op, seq_lens = seq_lens)
+        np.savez(result_path+'num.npz', N=len(seqs), num_seqs = num_seqs, options = options, Op = Op.__dict__, seq_lens = seq_lens)
     # check if the main parameters are consistent with the previous run
     # if target is clean, it doesn't matter, 
     # if it's continue, options will be replaced by the previous ones
@@ -109,7 +65,7 @@ def gen_job_args(job):
 # generate the full bsub command based on job and resources 
 # resources default to options defaults if not provided
 def get_bsub_cmd(job, options, mem = -1, t = -1):
-    _, _, _, _, _, _, log_path = load_paths(file_name)
+    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR)
     # if not override, use options defaults
     if mem==-1:
         mem = options.memory
@@ -152,7 +108,7 @@ def add_job(Map, job, deps):
     Map[job] = deps
 
 def run_jobs(jobs_flat, job_dep, options, job_paths):
-    _, _, _, _, _, _, log_path = load_paths(file_name)
+    _, _, _, _, _, _, log_path = utility.load_paths(file_name, RESULT_DIR)
     started = dict()
     for j in jobs_flat:
         started[j] = False
@@ -371,7 +327,7 @@ if __name__ == '__main__':
     else:
         RESULT_DIR = options.directory
 
-    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = load_paths(options.file_name)
+    data_path, result_path, index_path, search_path, eval_path, npz_path, log_path = utility.load_paths(options.file_name, RESULT_DIR)
     # if target is to continue do the all target, but load the options from the file
     target = options.target
     if options.target=='continue':
@@ -469,6 +425,8 @@ if __name__ == '__main__':
         num_seqs = summary['num_seqs']
         Op = summary['Op']
         Op = Op[()]
+        if isinstance(Op,dict): # it was created by the converter
+            Op = AttrDict(Op)
         total_count = 0
         total_correct = 0
         for i in range(N):
@@ -485,7 +443,7 @@ if __name__ == '__main__':
         if 'seq_lens' in summary.files:
             seq_lens = summary['seq_lens']
         else:
-            seqs, _, _, _, _ = load_files(file_name, clean=False)
+            seqs, _, _, _, _ = utility.load_files(file_name, RESULT_DIR, clean=False)
             seq_lens = [len(seqs[i]) for i in range(len(seqs))]
 
         print('\nMERGE RESULT ' + '-'*50, file=fout)
@@ -500,13 +458,13 @@ if __name__ == '__main__':
 
 
     elif target=='clean':
-        load_files(file_name, clean=True)
-        get_summary(file_name, options)
+        utility.load_files(file_name, RESULT_DIR, clean=True)
+        #get_summary(file_name, options)
 
 
     elif target=='build':
     
-        seqs, vals, num_seqs, opts, Op  = load_files(file_name, clean=False)
+        seqs, vals, num_seqs, opts, Op  = utility.load_files(file_name, RESULT_DIR, clean=False)
         kmers, s_kmer_vals, kmer_pos, kmer_seq_id = utility.list_kmers_simple([seqs[sid]], vals = [vals[sid]],  
                                                  k = k_small, addy = True, padding = int(k_big))
         kmer_vals = utility.get_kmver_vals(s_kmer_vals, k_big)
@@ -547,6 +505,8 @@ if __name__ == '__main__':
         summary = np.load(result_path + 'num.npz')
         Op = summary['Op']
         Op = Op[()]
+        if isinstance(Op,dict): # it was created by the converter
+            Op = AttrDict(Op)
         num_seqs = data1['num_seqs']
         kvals1 = data1['kmer_vals']
         kvals2 = data2['kmer_vals']
