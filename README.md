@@ -13,9 +13,11 @@ The overal organization of the code is as follows:
 
 
 # requirements to run the python codes
-The python code must be run by Python 3.6+. The packages required are `numpy, shutil, annoy, tqdm`, and `flann`, which all can be installed by conda. 
+The python code must be run by Python 3.6+. The packages required are `numpy, shutil, annoy, tqdm`, and `flann`, which all can be installed by conda.  
 
 For the c++ codes, the code has been compiled and tested with `-std=c++17` standards. 
+
+The python codes are mostly for prototyping and eventually all the codes must run natively in C++.
 
 # config file
 
