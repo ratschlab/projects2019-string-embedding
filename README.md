@@ -17,7 +17,7 @@ The python code must be run by Python 3.6+. The packages required are `numpy, sh
 
 For the c++ codes, the code has been compiled and tested with `-std=c++17` standards. 
 
-The python codes are mostly for prototyping and eventually all the codes must run natively in C++.
+The python codes are mostly for prototyping and eventually all the codes must run natively in C++ (in progress).
 
 # config file
 
