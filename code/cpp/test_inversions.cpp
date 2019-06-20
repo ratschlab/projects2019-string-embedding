@@ -6,6 +6,8 @@
 #include <sstream>
 #include <cmath>
 #include <fstream>
+#include <string.h>
+#include <functional>
 using namespace std;
 
 void print_vec(vector<long int> &vec, string name) {
@@ -164,25 +166,34 @@ struct string_distance {
     void set_rmat(long int dim, long int lmax) {
         len_max = lmax*ktools.Ksigma_len; 
         len_max = len_max * len_max; // to maake a pair
-        cout << " len_max = " << len_max << endl;
         this-> dim = dim;
 
+        /*
         rmat = vector<vector<long int>>(len_max, vector<long int>(dim, 0));
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
         std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
         std::uniform_int_distribution<> dis(0, 1);
 
-        cout << " setting rmat " << endl;
+        #pragma omp parallel for
         for (long int i=0; i<len_max; i++)
             for (long int j=0; j<dim; j++) 
                 rmat[i][j] = 2*dis(gen) - 1;
+                */
     }
 
     void rproj_pair(vector<long int> &pair, vector<long int> &proj) {
         proj.resize(dim, 0);
         for (long int d = 0; d<dim; d++) {
             for (long int i=0; i<pair.size(); i++) {
-                proj[d] += rmat[pair[i]][d];
+//                proj[d] += rmat[pair[i]][d];
+//                long int  b = (std::hash<long int>{}(pair[i] + d*len_max)) % 2;                 
+                uint64_t b = hash<int64_t>{}(pair[i]) ^ hash<uint64_t>{}(d);
+                b = b%2; 
+                if (b>1 or b<0) {
+                    cerr << " hash result not between -1 and 1: " << b <<  endl;
+                    exit(-1);
+                }
+                proj[d] += (2*b - 1);
             }
         }
     }
@@ -361,7 +372,6 @@ struct str_tools {
 };
 
 
-
 int main ( int argc, char* argv[]) {
     long int N = 100, k = 4, len = 100, dim = 20;
     string fname = "tmp";
@@ -378,27 +388,27 @@ int main ( int argc, char* argv[]) {
             dim = stoi(argv[++i]);
         }
     }
-    fname = "results/" + fname;
+    fname = "inv_result/" + fname;
     fname = fname + "_N" + to_string(N) + "_k" + to_string(k) + "_L" + to_string(len) + "_D" + to_string(dim)+ ".txt";
-    // init
     string Sigma = "acgt";
     bool verbose = false;
-    string_distance sdist(Sigma, k, verbose);
-    sdist.set_rmat(dim,len); 
-    str_tools st(Sigma);
-    vector<long int> svec, svec2;
+
     ofstream fout;
     fout.open (fname);
-    long int L1, L2;
     for (long int ed = 1; ed<=len; ed++) {
-        cout << " ed " << ed << endl;
+        string_distance sdist(Sigma, k, verbose);
+        sdist.set_rmat(dim,len); 
+        str_tools st(Sigma);
+        vector<long int> svec, svec2;
+        long int L1, L2;
         for (long int i=0; i<N; i++) {
             st.make_rand_pair(svec, svec2, len, ed);
             long int ed2 = sdist.ed(svec,svec2); 
             long int ic = sdist.inversions(svec,svec2, L1, L2);
-            fout << ed2 << ", " << ic << ", " << L1 << ", " << L2 << endl;
-//            cout << L2 << " ";
+            fout << ed2 << ", " << ic << ", " << L1 << ", " << L2 << endl << std::flush;
         }
+
     }
+    fout.close();
     return 0;
 }
