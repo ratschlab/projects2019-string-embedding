@@ -10,7 +10,11 @@
 #include <functional>
 using namespace std;
 
-void print_vec(vector<long int> &vec, string name) {
+typedef vector<long int> svec_t;
+typedef vector<long int> kvec_t;
+typedef vector<long int> ivec_t;
+
+void print_vec(svec_t &vec, string name) {
     cout << name << " = \t";
     for (long int v : vec ) {
         cout << v << ", ";
@@ -18,7 +22,7 @@ void print_vec(vector<long int> &vec, string name) {
     cout << endl;
 }
 
-void print_svec(vector<long int> &svec, string name, string Sigma) {
+void print_svec(svec_t &svec, string name, string Sigma) {
     cout << name << " = \t";
     for (long int v : svec ) {
         if (v>=Sigma.size()) {
@@ -39,7 +43,7 @@ struct kmer_tools {
     kmer_tools() {}
 
     kmer_tools(string Sigma, long int k) : Sigma(Sigma), sigma_len(Sigma.length()), k(k) {
-        c2i = vector<long int>(256, -1);
+        c2i = svec_t(256, -1);
         for (long int i=0; i<sigma_len; i++) {
             c2i[(long int)Sigma[i]] = i;
         }
@@ -48,7 +52,7 @@ struct kmer_tools {
             Ksigma_len *= sigma_len;
     }
     long int cindex(char c) {
-        long int i =  c2i[(uint8_t)c];
+        auto i =  c2i[(uint8_t)c];
         if (i<0) {
             cerr << "character " << c << " not in the alphabet: " << Sigma << endl;
             exit(-1);
@@ -56,14 +60,14 @@ struct kmer_tools {
         return i;
     }
 
-    void str2svec(vector<long int> &svec, string &s) {
+    void str2svec(svec_t &svec, string &s) {
         svec.clear();
         svec.reserve(s.length());
         for (long int i=0; i<s.length(); i++)
-            svec.push_back(s[i]);
+            svec.push_back(cindex(s[i]));
     }
 
-    string svec2str(vector<long int> &svec) {
+    string svec2str(svec_t &svec) {
         string s = "";
         for (auto v : svec) {
             s = s + Sigma[v];
@@ -71,7 +75,7 @@ struct kmer_tools {
         return s;
     }
 
-    void svec2kmers(vector<long int> &kmers,vector<long int> &s) {
+    void svec2kmers(kvec_t &kmers,svec_t &s) {
         long int slen = s.size();
         kmers.clear();
         kmers.resize(slen-k+1);
@@ -83,7 +87,7 @@ struct kmer_tools {
         }
     }
 
-    void str2kmers(vector<long int> &kmers,string &s) {
+    void str2kmers(kvec_t &kmers,string &s) {
         long int slen = s.length();
         kmers.clear();
         kmers.resize(slen-k+1);
@@ -95,7 +99,7 @@ struct kmer_tools {
         }
     }
 
-    void unify_kmers(vector<long int> &ukmers, vector<long int> &kmers) {
+    void unify_kmers(svec_t &ukmers, svec_t &kmers) {
         long int len = kmers.size();
         counter.clear();
         counter.resize(Ksigma_len);
@@ -109,7 +113,7 @@ struct kmer_tools {
         }
     }
 
-    void vec2pairs(vector<long int> &pairs, vector<long int> ukmers, long int max_len) {
+    void vec2pairs(svec_t &pairs, svec_t ukmers, long int max_len) {
         long int len = ukmers.size();
         pairs.clear();
         pairs.reserve(len*(len-1)/2);
@@ -121,7 +125,7 @@ struct kmer_tools {
         }
     }
 
-    long int pair_diff(vector<long int> &p1, vector<long int> &p2) {
+    long int pair_diff(svec_t &p1, svec_t &p2) {
         sort(p1.begin(), p1.end());
         sort(p2.begin(), p2.end());
         long int l1 = p1.size(),
@@ -147,19 +151,19 @@ struct kmer_tools {
 struct string_distance {
     string Sigma;
     kmer_tools ktools;
-    vector<long int> kmers, ukmers, pairs, svec, proj;
-    vector<long int> kmers2, ukmers2, pairs2, svec2, proj2;
+    svec_t kmers, ukmers, pairs, svec, proj;
+    svec_t kmers2, ukmers2, pairs2, svec2, proj2;
     long int k ;
     bool verbose;
 
     long int len_max, dim;
-    vector<vector<long int> > rmat;
+    vector<svec_t > rmat;
 
     string_distance(string Sigma, long int k, bool verbose = false) : Sigma(Sigma), k(k), verbose(verbose) {
         ktools = kmer_tools(Sigma, k);
     }
 
-    string svec2str(vector<long int> &svec) {
+    string svec2str(svec_t &svec) {
         return ktools.svec2str(svec);
     }
 
@@ -168,44 +172,44 @@ struct string_distance {
         len_max = len_max * len_max; // to maake a pair
         this-> dim = dim;
 
-        /*
-        rmat = vector<vector<long int>>(len_max, vector<long int>(dim, 0));
+        rmat = vector<svec_t>(len_max, svec_t(dim, 0));
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
         std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
         std::uniform_int_distribution<> dis(0, 1);
 
-        #pragma omp parallel for
         for (long int i=0; i<len_max; i++)
             for (long int j=0; j<dim; j++) 
                 rmat[i][j] = 2*dis(gen) - 1;
-                */
     }
 
-    void rproj_pair(vector<long int> &pair, vector<long int> &proj) {
+    void rproj_pair(svec_t &pair, svec_t &proj) {
         proj.resize(dim, 0);
         for (long int d = 0; d<dim; d++) {
             for (long int i=0; i<pair.size(); i++) {
-//                proj[d] += rmat[pair[i]][d];
-//                long int  b = (std::hash<long int>{}(pair[i] + d*len_max)) % 2;                 
-                uint64_t b = hash<int64_t>{}(pair[i]) ^ hash<uint64_t>{}(d);
-                b = b%2; 
+                proj[d] += rmat[pair[i]][d];
+//                long int  b = (std::hash<long int>{}(pair[i] + d*len_max));
+//            int64_t b = hash<int64_t>{}(pair[i]) + hash<int64_t>{}(d);
+                //int64_t b = rmat[pair[i]/len_max][d] + rmat[pair[i]%len_max][d];
+                //b = b%2; 
+                /*
                 if (b>1 or b<0) {
                     cerr << " hash result not between -1 and 1: " << b <<  endl;
                     exit(-1);
                 }
-                proj[d] += (2*b - 1);
+                */
+ //               proj[d] += (2*b - 1);
             }
         }
     }
 
-    long int l1(vector<long int> &v, vector<long int> &v2) {
+    long int l1(ivec_t &v, ivec_t &v2) {
         long int d = 0;
         for (long int i=0; i<v.size(); i++)
             d += abs(v[i]-v2[i]);
         return d;
     }
 
-    long int l2(vector<long int> &v, vector<long int> &v2) {
+    long int l2(ivec_t &v, ivec_t &v2) {
         long long int d = 0, dl;
         for (long int i=0; i<v.size(); i++) {
             dl =(v[i]-v2[i]);
@@ -220,7 +224,7 @@ struct string_distance {
 
 
 
-    long int inversions(vector<long int> &s1, vector<long int> &s2, long int &L1, long int &L2) {
+    long int inversions(svec_t &s1, svec_t &s2, long int &L1, long int &L2) {
         long int max_len = max(s1.size(), s2.size());
         ktools.svec2kmers(kmers, s1); 
         ktools.unify_kmers(ukmers, kmers); 
@@ -260,7 +264,7 @@ struct string_distance {
     }
 
 
-    long int ed(vector<long int> & str1,vector<long int> &str2)
+    long int ed(svec_t & str1,svec_t &str2)
     {
         long int m = str1.size(), n = str2.size();
         long int dp[m+1][n+1];
@@ -321,13 +325,13 @@ struct str_tools {
     str_tools(string Sigma, long int seed) : Sigma(Sigma), sigma_len(Sigma.length()), gen(std::mt19937(seed)){}
 
 
-    void print(vector<long int> &svec) {
+    void print(svec_t &svec) {
         for (long int v : svec)
             cout << Sigma[v];
         cout << endl;
     }
 
-    void rand_svec(vector<long int> &svec, long int len) {
+    void rand_svec(svec_t &svec, long int len) {
         std::uniform_int_distribution<> dis(0, sigma_len-1);
 
         svec.clear();
@@ -337,7 +341,7 @@ struct str_tools {
         }
     }
 
-    void rand_ed_one(vector<long int> &svec) {
+    void rand_ed_one(svec_t &svec) {
         long int slen = svec.size();
         std::uniform_int_distribution<> dis(0, 2);
         long int choice = dis(gen);
@@ -358,12 +362,12 @@ struct str_tools {
         }
     }
 
-    void edit(vector<long int> &svec, long int ed) {
+    void edit(svec_t &svec, long int ed) {
         for (long int i=0; i<ed; i++)
             rand_ed_one(svec);
     }
 
-    void make_rand_pair(vector<long int> &svec, vector<long int> &svec2, long int len, long int ed) {
+    void make_rand_pair(svec_t &svec, svec_t &svec2, long int len, long int ed) {
         rand_svec(svec, len);
         svec2 = svec;
         edit(svec2, ed);
@@ -399,7 +403,7 @@ int main ( int argc, char* argv[]) {
         string_distance sdist(Sigma, k, verbose);
         sdist.set_rmat(dim,len); 
         str_tools st(Sigma);
-        vector<long int> svec, svec2;
+        svec_t svec, svec2;
         long int L1, L2;
         for (long int i=0; i<N; i++) {
             st.make_rand_pair(svec, svec2, len, ed);
