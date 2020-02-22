@@ -14,9 +14,14 @@ struct command_group {
             this->S = S; this->L = L; this->H = H;
         }
         virtual bool getval() = 0;
-        virtual void set(string s) {};
         virtual void set(const cmd_type *cd) = 0;
-        virtual void set() {}
+        virtual void set(string s) {};
+        virtual string sval() = 0; // type and value 
+        virtual void set() {};
+
+        virtual string to_string () {
+            return  S + ",\t" + L + "\t" + H + "\t" + sval(); 
+        }
     };
 
     struct cmd_type_int : public cmd_type {
@@ -24,6 +29,7 @@ struct command_group {
         cmd_type_int(int &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
         void set(string sval) { val = std::stoi(sval); }
         void set(const cmd_type *cd) { val = ((cmd_type_int*)cd)->val; }
+        string sval() { return std::to_string(val) + "(int)"; }
         bool getval() { return true;} 
     };
     
@@ -32,6 +38,7 @@ struct command_group {
         cmd_type_str(string &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
         void set(string sval) { val = sval; }
         void set(const cmd_type *cd) { val = ((cmd_type_str*)cd)->val; }
+        string sval() { return val + "(str)"; }
         bool getval() { return true;} 
     };
     
@@ -39,6 +46,7 @@ struct command_group {
         bool &val; bool to;
         cmd_type_bool(bool &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
         bool getval() { return false;} 
+        string sval() { return std::to_string(val) + "(bool)"; }
         void set(const cmd_type *cd) { val = ((cmd_type_bool*)cd)->val; }
         void set() { val = to; }
     };
@@ -68,6 +76,22 @@ struct command_group {
         for (auto C : G) {
             std::cout << "\t"<< (C->S) << "\t\t" << (C->L) <<"\t" << (C->H) << std::endl;
         }
+    }
+
+    string get_config(int __long = 0) {
+        string sconf;
+        if (__long == 1) {
+            sconf= "val\t short arg \t long arg\t description\n";
+            for (auto c : G) {
+                sconf += c->to_string()+ "\n";
+            }
+        } else {
+            for (auto c : G) {
+                sconf += c->S+","+c->L + ": " + c->sval() + ", ";
+            }
+            sconf += "\n"; 
+        }
+        return sconf;
     }
 
     cmd_type* read(string key) {

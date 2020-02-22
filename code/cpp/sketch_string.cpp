@@ -83,6 +83,7 @@ struct tensor_embed : public string_tools_t<C1,C2> {
         } 
         H = dvect_t(dim, 0);
         for (int m=0; m<dim; m++) {
+            int sum = 0;
             for (int d=0; d<num_bins; d++) {
                 H[m] += distribution[m][d]*mem[t_len-1][d];
             }
@@ -171,7 +172,7 @@ void test_pairs(std::string alpha, int num, string_opts &opts) {
     tt.init_ideal();
 
     st.gen_pairs(S1,S2,num);
-    std::cout << "ed \t td \t hd \t HD " << std::endl;
+    std::cout << "ed \t td \t hd \t HD \n";
     for (int i=0; i<num; i ++ ){
         seq_t r1 = S1[i], r2 = S2[i]; 
         ivect_t s1, s2, T1, T2;
@@ -191,17 +192,19 @@ void test_pairs(std::string alpha, int num, string_opts &opts) {
         auto hdiff = tt.L1(h1,h2);
         auto Hdiff = tt.L1(H1,H2);
         auto ed = tt.edit_distance(s1,s2);
-        std::cout << ed << "\t " << tdiff << "\t " << hdiff<< "\t " << Hdiff<<std::endl;
+        std::cout << ed << ",\t " << tdiff << ",\t " << hdiff<< ",\t " << Hdiff<< "\n";
     }
 }
 
 
 int main(int argc, char* argv[]) {
-    int num = 100;
-    std::string alpha = "acgt"; 
+    using std::cout;
     string_opts  opts;
     opts.read_args(argc,argv);
+    cout << opts.get_config() ;
 
+    int num = 100;
+    std::string alpha = "acgt"; 
     test_pairs(alpha, num, opts);
 
     return 0;
