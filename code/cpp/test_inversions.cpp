@@ -259,6 +259,32 @@ struct string_distance {
         return min(min(x, y), z);
     }
 
+    long int lcs( vector<long int>  X, vector<long int>  Y)
+    {
+        int m = X.size();
+        int n = Y.size();
+        int L[m+1][n+1];
+
+        /* Following steps build L[m+1][n+1] in bottom up fashion. Note
+           that L[i][j] contains length of LCS of X[0..i-1] and Y[0..j-1] */
+        for (int i=0; i<=m; i++)
+        {
+            for (int j=0; j<=n; j++)
+            {
+                if (i == 0 || j == 0)
+                    L[i][j] = 0;
+                else if (X[i-1] == Y[j-1])
+                    L[i][j] = L[i-1][j-1] + 1;
+                else
+                    L[i][j] = max(L[i-1][j], L[i][j-1]);
+            }
+        }
+
+        // Following code is used to print LCS
+        int index = L[m][n];
+        return index;
+    }
+
 
     long int ed(vector<long int> & str1,vector<long int> &str2)
     {
@@ -405,7 +431,8 @@ int main ( int argc, char* argv[]) {
             st.make_rand_pair(svec, svec2, len, ed);
             long int ed2 = sdist.ed(svec,svec2); 
             long int ic = sdist.inversions(svec,svec2, L1, L2);
-            fout << ed2 << ", " << ic << ", " << L1 << ", " << L2 << endl << std::flush;
+            long int _lcs = sdist.lcs(svec,svec2);
+            fout << ed2 << ", " << ic << ", " << L1 << ", " << L2 << ", " << _lcs<< endl << std::flush;
         }
 
     }
