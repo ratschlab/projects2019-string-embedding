@@ -20,7 +20,7 @@ struct command_group {
         virtual void set() {};
 
         virtual string to_string () {
-            return  S + ",\t" + L + "\t" + H + "\t" + sval(); 
+            return  sval() + "\t" +  S + ",\t" + L + "\t" + H + "\n"; 
         }
     };
 
@@ -72,16 +72,16 @@ struct command_group {
     }
 
     void print_help() {
-        std::cout << "val\t short arg \t long arg\t description\n";
+        std::cout <<  "SHORT ARG, \t LONG ARG,\t DESCRIPTION\n";
         for (auto C : G) {
-            std::cout << "\t"<< (C->S) << "\t\t" << (C->L) <<"\t" << (C->H) << std::endl;
+            std::cout << (C->S) << "\t\t" << (C->L) <<"\t" << (C->H) << std::endl;
         }
     }
 
     string get_config(int __long = 0) {
         string sconf;
         if (__long == 1) {
-            sconf= "val\t short arg \t long arg\t description\n";
+            sconf =  "VALUE,\t SHORT ARG \t LONG ARG\t DESCRIPTION\n";
             for (auto c : G) {
                 sconf += c->to_string()+ "\n";
             }

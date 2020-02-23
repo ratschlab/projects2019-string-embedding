@@ -19,6 +19,7 @@ struct string_tools_t {
 
     std::default_random_engine gen;
 
+
     template <class T>
     T L1(const std::vector<T>  &v1, const std::vector<T> &v2) {
         assert(v1.size()==v2.size());
@@ -128,7 +129,7 @@ struct string_tools_t {
     void pmat(const std::vector<std::vector<T> > &mat) {
         for (auto row : mat ) {
             for (auto e : row ) {
-                std::cout << e << " ";
+                std::cout << e << ", ";
             }
             std::cout << "\n";
         }
