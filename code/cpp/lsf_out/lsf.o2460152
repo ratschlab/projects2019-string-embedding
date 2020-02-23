@@ -1,0 +1,38 @@
+Sender: LSF System <lsfadmin@lm-a2-021>
+Subject: Job 2460152: <./a.out --gene-len 100 --gene-len2 2000 -G 20000 -P 55000 -n 5 -r 3 --geometric-p .34 -m .1 -r 4 -f data18> in cluster <leomed> Exited
+
+Job <./a.out --gene-len 100 --gene-len2 2000 -G 20000 -P 55000 -n 5 -r 3 --geometric-p .34 -m .1 -r 4 -f data18> was submitted from host <lm-login-02> by user <ajoudaki> in cluster <leomed> at Mon Jun 17 02:38:11 2019
+Job was executed on host(s) <lm-a2-021>, in queue <normal.24h>, as user <ajoudaki> in cluster <leomed> at Mon Jun 17 02:38:12 2019
+</cluster/home/ajoudaki> was used as the home directory.
+</cluster/home/ajoudaki/projects2019-string-embedding/code/cpp> was used as the working directory.
+Started at Mon Jun 17 02:38:12 2019
+Terminated at Mon Jun 17 03:06:56 2019
+Results reported at Mon Jun 17 03:06:56 2019
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+./a.out --gene-len 100 --gene-len2 2000 -G 20000 -P 55000 -n 5 -r 3 --geometric-p .34 -m .1 -r 4 -f data18
+------------------------------------------------------------
+
+TERM_MEMLIMIT: job killed after reaching LSF memory usage limit.
+Exited with exit code 137.
+
+Resource usage summary:
+
+    CPU time :                                   1720.89 sec.
+    Max Memory :                                 200000 MB
+    Average Memory :                             99313.34 MB
+    Total Requested Memory :                     200000.00 MB
+    Delta Memory :                               0.00 MB
+    Max Swap :                                   -
+    Max Processes :                              3
+    Max Threads :                                4
+    Run time :                                   1753 sec.
+    Turnaround time :                            1725 sec.
+
+The output (if any) follows:
+
+ PROJ_DIR = /cluster/work/grlab/projects/projecs2019-string-embedding/synthetic
+/cluster/shadow/.lsbatch/1560731891.2460152: line 8: 18256 Killed                  ./a.out --gene-len 100 --gene-len2 2000 -G 20000 -P 55000 -n 5 -r 3 --geometric-p .34 -m .1 -r 4 -f data18

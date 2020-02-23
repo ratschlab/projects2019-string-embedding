@@ -1,0 +1,19 @@
+VALUE,	 SHORT ARG 	 LONG ARG	 DESCRIPTION
+1(int)	-k,	--kmer-size	size of kmer
+
+3(int)	-t,	--tuple-size	number of elemtns in the tuple
+
+10(int)	-l,	--str-len	lenght of string to search
+
+2(int)	-S,	--sigma-len	size of the alphabet
+
+64(int)	-m,	--dim	dimension of sketching
+
+2(int)	-B,	--num-bins	discretization for tensor sketching
+
+0(bool)	-N,	--normaliese	normlize cauchy output
+
+tmp(str)	-d,	--dest-dir	normlize cauchy output
+
+(str)	-s,	--src-dir	normlize cauchy output
+

@@ -1,0 +1,36 @@
+Sender: LSF System <lsfadmin@lm-a2-022>
+Subject: Job 2464838: <./a.out --gene-len 100 --gene-len2 2000 -G 12000 -P 55000 -n 3 -r 3 --geometric-p .34 -m .1 -f data18> in cluster <leomed> Done
+
+Job <./a.out --gene-len 100 --gene-len2 2000 -G 12000 -P 55000 -n 3 -r 3 --geometric-p .34 -m .1 -f data18> was submitted from host <lm-login-02> by user <ajoudaki> in cluster <leomed> at Mon Jun 17 18:13:11 2019
+Job was executed on host(s) <lm-a2-022>, in queue <normal.4h>, as user <ajoudaki> in cluster <leomed> at Mon Jun 17 18:13:13 2019
+</cluster/home/ajoudaki> was used as the home directory.
+</cluster/home/ajoudaki/projects2019-string-embedding/code/cpp> was used as the working directory.
+Started at Mon Jun 17 18:13:13 2019
+Terminated at Mon Jun 17 18:23:40 2019
+Results reported at Mon Jun 17 18:23:40 2019
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+./a.out --gene-len 100 --gene-len2 2000 -G 12000 -P 55000 -n 3 -r 3 --geometric-p .34 -m .1 -f data18
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   623.40 sec.
+    Max Memory :                                 69970 MB
+    Average Memory :                             39386.19 MB
+    Total Requested Memory :                     150000.00 MB
+    Delta Memory :                               80030.00 MB
+    Max Swap :                                   -
+    Max Processes :                              3
+    Max Threads :                                4
+    Run time :                                   653 sec.
+    Turnaround time :                            629 sec.
+
+The output (if any) follows:
+
+ PROJ_DIR = /cluster/work/grlab/projects/projecs2019-string-embedding/synthetic

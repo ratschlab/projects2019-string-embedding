@@ -1,0 +1,2 @@
+ PROJ_DIR = /cluster/work/grlab/projects/projecs2019-string-embedding/synthetic
+/cluster/shadow/.lsbatch/1560655514.2459740: line 8: 34528 Killed                  ./a.out --gene-len 100 --gene-len2 2000 -G 10000 -P 55000 -n 5 -r 3 --geometric-p .34 -m .1 -r 4 -f data16
