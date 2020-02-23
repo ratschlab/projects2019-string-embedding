@@ -64,6 +64,25 @@ struct tensor_embed : public string_tools_t<C1,C2> {
     }
 
 
+    template <class T>
+    T abs(T v) { 
+        T r =  (v>=0) ? (v) : (-v); 
+        return r;
+    }
+
+
+    template <class T>
+   T median(std::vector<T>  v1, const std::vector<T> &v2) {
+        assert(v1.size()==v2.size());
+        for (int i=0; i<v1.size(); i++ ) {
+            v1[i] = abs(v1[i]- v2[i]);
+        } 
+        std::sort(v1.begin(), v1.end());
+        size_t med = v1.size()/2;
+        return v1[med];
+    }
+
+
     
 
     void init_rand(int sig_len, int dim, int t_len, int num_bins) {
@@ -239,9 +258,9 @@ void test_pairs(std::string alpha, int num, string_opts &opts) {
         tt.sketch(s2,H2);
 
         auto tdiff = ss.L1(T1,T2);
-        auto hdiff = ss.L1(h1,h2);
-        auto Hdiff = ss.L1(H1,H2);
-        auto ed = ss.edit_distance(s1,s2);
+        auto hdiff = tt.median<double>(h1,h2);
+        auto Hdiff = tt.median<double>(H1,H2);
+        auto ed = ss.edit_distance(r1,r2);
         std::cout << ed << ",\t " << tdiff << ",\t " <<  
             std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< "\n";
         fout << ed << ",\t " << tdiff << ",\t " <<  
