@@ -7,6 +7,7 @@
 #include <map>
 
 template<typename seq_type,typename int_type>
+
 struct string_tools_t {
     typedef std::vector<seq_type> seq_t;
     typedef std::vector<int_type> ivect_t;
