@@ -1,11 +1,5 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <map>
 #include "command_group.h"
 
-
-typedef std::string string;
 
 struct command_group::cmd_type {
     string S, L, H, sv;
@@ -72,7 +66,7 @@ void command_group::print_help() {
     }
 }
 
-string command_group::get_config(int __long ) {
+command_group::string command_group::get_config(int __long ) {
     string sconf;
     if (__long == 1) {
         sconf =  "VALUE,\t SHORT ARG \t LONG ARG\t DESCRIPTION\n";
