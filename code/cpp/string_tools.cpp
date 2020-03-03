@@ -21,18 +21,6 @@ struct string_tools_t {
     std::default_random_engine gen;
 
 
-
-
-    template <class T>
-    T L1(const std::vector<T>  &v1, const std::vector<T> &v2) {
-        assert(v1.size()==v2.size());
-        T diff = 0;
-        for (int i=0; i<v1.size(); i++ ) {
-            diff += abs(v1[i]-v2[i]);
-        } 
-        return diff;
-    }
-
     void translate(string alpha, string &str, seq_t &seq) {
         std::map<char,int> c2i;
         std::map<int,char> i2c;
@@ -116,35 +104,6 @@ struct string_tools_t {
         return d[len1][len2];
     }
 
-    void pseq(const seq_t &seq) {
-        for (auto s : seq ) { 
-            std::cout << s;
-        } std::cout << "\n";
-    }
-
-    template <class T>
-    void pvec(const std::vector<T> &vec) {
-        for (auto v : vec ) {
-            std::cout << v << " " ;
-        } std::cout << "\n";
-    }
-    template <class T> 
-    void pmat(const std::vector<std::vector<T> > &mat) {
-        for (auto row : mat ) {
-            for (auto e : row ) {
-                std::cout << e << ", ";
-            }
-            std::cout << "\n";
-        }
-    }
-
-    template<class T>
-    T pow(T base, T p) {
-        T r = 1;
-        for (int i=0; i<p; i++)  
-            r = r * base; 
-        return r;
-    }
 
     size_t read_tuple(const seq_t &seq, const  indices_t &ind, int base) {
         size_t r = 0;
