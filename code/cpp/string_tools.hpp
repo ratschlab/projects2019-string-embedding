@@ -18,6 +18,7 @@ struct string_tools_t {
     template <typename T> 
         using Vec2D = std::vector<std::vector<T>>; 
     std::default_random_engine gen;
+    st_utils sutils;
 
 
     template <typename T>
@@ -66,6 +67,7 @@ struct string_tools_t {
                     sub(seq,pos,c);;
             }
         }
+
     template <typename T> 
         void rand_ops(Vec<T> &seq, int sig_len, int num_ops, Vec<double> prob ) {
             for (int i=0; i<num_ops; i++ ) {

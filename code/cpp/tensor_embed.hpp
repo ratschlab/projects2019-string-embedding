@@ -7,19 +7,10 @@
 template<typename C1, typename C2> 
 struct tensor_embed : public string_tools_t {
 
-    typedef std::string string; 
-    std::default_random_engine gen;
-    st_utils sut;
-
-    template <typename T> 
-    using Vec = std::vector<T>; 
-    template <typename T> 
-    using Vec2D = std::vector<std::vector<T>>; 
-
     Vec2D<C2> proj_ideal;
 
     void init_ideal(int sig_len, int t_len, int dim) {
-        int tsize = pow(sig_len,t_len);
+        int tsize = sutils.pow(sig_len,t_len);
         proj_ideal = Vec2D<C2>(dim, Vec<C2>(tsize));
         std::cauchy_distribution<C2> cauchy(0,1);
         for (int d=0; d<dim; d++) {
@@ -31,7 +22,7 @@ struct tensor_embed : public string_tools_t {
 
     template <typename T1, typename T2>
     void embed_naive(const Vec<T1> &seq, Vec<T2>  &T, int sig_len, int t_len) {
-        int tsize = pow(sig_len,t_len);
+        int tsize = sutils.pow(sig_len,t_len);
         T = Vec<T2>(tsize,0);
         Vec<size_t> ind(t_len); 
         for (int i=0; i<t_len; i++) { 
@@ -59,7 +50,7 @@ struct tensor_embed : public string_tools_t {
         }
         if (normalize) {
             for (int i=0; i<dim; i++ ) { 
-                h[i] = h[i] / sut.L1(T);
+                h[i] = h[i] / sutils.L1(T);
                 h[i] = h[i] * num_bins;
             }
         }

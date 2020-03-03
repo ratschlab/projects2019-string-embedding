@@ -7,14 +7,6 @@
 template<typename C1, typename C2> 
 struct tensor_sketch : public string_tools_t {
 
-    typedef std::string string; 
-    std::default_random_engine gen;
-    st_utils sut;
-    template <typename T> 
-    using Vec = std::vector<T>; 
-    template <typename T> 
-    using Vec2D = std::vector<std::vector<T>>; 
-
     Vec2D<C1> rand_phase;
     Vec2D<C2> distribution;
 
@@ -22,7 +14,7 @@ struct tensor_sketch : public string_tools_t {
     void init_rand(int sig_len, int dim, int t_len, int num_bins) {
         std::cauchy_distribution<double> cauchy(0,1);
         std::uniform_int_distribution<int> unif(0,num_bins-1);
-        int tsize = sut.pow(sig_len,t_len);
+        int tsize = sutils.pow(sig_len,t_len);
         rand_phase = Vec2D<C1>(t_len, Vec<C1>(sig_len));
         distribution = Vec2D<C2>(dim, Vec<C2>(num_bins));
         for (int d=0; d<dim; d++) {
@@ -68,7 +60,7 @@ struct tensor_sketch : public string_tools_t {
         }
         if (normalize) {
             for (int m=0; m<dim; m++) {
-                H[m] = H[m]/sut.L1(mem[t_len-1]);
+                H[m] = H[m]/sutils.L1(mem[t_len-1]);
                 H[m] = H[m]/num_bins;
             }
         }
