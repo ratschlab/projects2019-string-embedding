@@ -109,7 +109,8 @@ struct tensor_embed : public string_tools_t<C1,C2> {
 
     void init_rand3(int sig_len, int dim, int t_len, int num_bins ) {
         std::cauchy_distribution<double> cauchy(0,1);
-        std::uniform_int_distribution<int> unif(0,num_bins-1);
+        int ex_nbins = (1<<num_bins);
+        std::uniform_int_distribution<int> unif(0,ex_nbins-1);
         int tsize = pow(sig_len,t_len);
         rand_phase = mat2d_int(t_len, ivect_t(sig_len));
         distribution = mat2d_double(dim, dvect_t(num_bins)); 
@@ -130,6 +131,15 @@ struct tensor_embed : public string_tools_t<C1,C2> {
         }
     }
 
+    void set_bits(int n, int nbits, vector<int> &inds) {
+        inds.clear();
+        for (int i=0; i<=nbits; i++ ) {
+            if (n & (1<<i) != 0) {
+                inds.push_back(i);
+            }
+        }
+    }
+
     void sketch3(const seq_t &seq, dvect_t &H, int sig_len, int dim, int t_len, int num_bins, bool normalize ) {
         /*
         assert(rand_phase.size()==t_len);
@@ -138,16 +148,30 @@ struct tensor_embed : public string_tools_t<C1,C2> {
         assert(distribution[0].size()==num_bins);
         */
         ivec3D mem(dim,ivec2D(t_len, ivec1D(num_bins,0)));
+        ivec3D mem(dim,ivec2D(t_len, ivec1D(num_bins,0)));
         for (int m=0; m<dim; m++) {
             for (size_t i=0; i<seq.size(); i++)  {
                 for (size_t t=0; t<t_len; t++) {
                         int ph = rand_phase3[m][t][seq[i]];
                     if (t==0) {
-                        mem[m][t][ph]++;
+                        for (size_t p=0; p<num_bins; p++) {
+                            bool b = (ph & (1<<p))>0;
+                            if (b) {
+                                mem[m][t][p]++;
+                            } else  {
+                                neg[m][t][p]++;
+                            }
+                        }
                     } else {
                         for (size_t p=0; p<num_bins; p++) {
-                            assert(t<mem.size() and t>=1);
-                            mem[m][t][(p+ph) % num_bins] += mem[m][t-1][p];
+                            bool b = (ph & (1<<p))>0;
+                            if (b) {
+                                mem[m][t][p]+= neg[m][t-1][p];
+                                neg[m][t][ph]+= mem[m][t-1][p];
+                            } else  {
+                                mem[m][t][ph]+= mem[m][t-1][p];
+                                neg[m][t][ph]+= neg[m][t-1][p];
+                            }
                         }
                     }
                 }
