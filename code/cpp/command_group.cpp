@@ -1,6 +1,5 @@
 #include "command_group.h"
 
-
 struct command_group::cmd_type {
     string S, L, H, sv;
     void init(string S, string L, string H = "no description " ) {
@@ -150,22 +149,3 @@ void command_group::deep_copy(const command_group &cg ) {
 }
 
 
-
-void string_opts::add_options() {
-    add_int(k_len,"-k","--kmer-size","size of kmer");
-    add_int(t_len,"-t","--tuple-size","number of elemtns in the tuple");
-    add_int(len,"-l","--str-len","lenght of string to search");
-    add_int(sig_len,"-S","--sigma-len","size of the alphabet");
-    add_int(dim,"-m","--dim","dimension of sketching");
-    add_int(num_bins,"-B","--num-bins","discretization for tensor sketching");
-    add_bool(normalize, true, "-N", "--normaliese", "normlize cauchy output" );
-    add_str(dir, "-d", "--dest-dir", "normlize cauchy output" );
-    add_str(src, "-s", "--src-dir", "normlize cauchy output" );
-
-}
-
-string_opts::string_opts(const string_opts &so) {
-    deep_copy(so) ; 
-}
-
-string_opts::string_opts() {}

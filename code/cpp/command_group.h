@@ -40,16 +40,5 @@ struct command_group {
     void deep_copy(const command_group &cg ) ;
 };
 
-struct string_opts : public command_group {
-    int k_len = 4, t_len = 2, len = 100, sig_len = 4, dim = 50, num_bins = 5, disc = 8; 
-    bool normalize = false;
-    string dir = "tmp", res_path = dir + "/res.txt", conf_path = dir+"/conf.txt", src;
-
-    void add_options();
-
-    string_opts(const string_opts &);
-
-    string_opts();
-};
 
 #endif //  __COMMAND_GROUP__ 

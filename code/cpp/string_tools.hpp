@@ -1,3 +1,7 @@
+#ifndef __STRING_TOOLS__
+#define  __STRING_TOOLS__
+
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -5,9 +9,9 @@
 #include <algorithm>
 #include <assert.h>
 #include <map>
+#include "string_options.hpp"
 
 template<typename seq_type,typename int_type>
-
 struct string_tools_t {
     typedef std::vector<seq_type> seq_t;
     typedef std::vector<int_type> ivect_t;
@@ -139,5 +143,17 @@ struct string_tools_t {
         }
     }
 
+    
+    void gen_pairs(std::vector<seq_t> &seqs1, std::vector<seq_t> &seqs2, int num_pairs, const string_opts &ops) {
+       gen_pairs(seqs1,seqs2,ops.len, ops.sig_len, num_pairs); 
+    }
+
+    void seq2kmer(seq_t &seq, ivect_t  &kseq, const string_opts &ops) { 
+        seq2kmer(seq, kseq, ops.k_len, ops.sig_len);
+    }
+
 };
 
+
+
+#endif // __STRING_TOOLS__
