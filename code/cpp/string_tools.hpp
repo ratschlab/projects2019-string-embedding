@@ -11,112 +11,118 @@
 #include <map>
 #include "string_options.hpp"
 
-template<typename seq_type,typename int_type>
 struct string_tools_t {
-    typedef std::vector<seq_type> seq_t;
-    typedef std::vector<int_type> ivect_t;
-    typedef std::vector<size_t> indices_t;
-    typedef std::vector<double> dvect_t;
-    typedef std::vector<std::vector<int>> mat2d_int;
-    typedef std::vector<std::vector<double>> mat2d_double;
     typedef std::string string; 
-
-
+    template <typename T> 
+        using Vec = std::vector<T>; 
+    template <typename T> 
+        using Vec2D = std::vector<std::vector<T>>; 
     std::default_random_engine gen;
 
 
-    void translate(string alpha, string &str, seq_t &seq) {
-        std::map<char,int> c2i;
-        std::map<int,char> i2c;
-        for (int i=0; i<alpha.size() ; i++) {
-            char c = alpha[i];
-            c2i[c] = i;
-            i2c[i] = c;
+    template <typename T>
+        void translate(string alpha, string &str, Vec<T> &seq) {
+            std::map<char,int> c2i;
+            std::map<int,char> i2c;
+            for (int i=0; i<alpha.size() ; i++) {
+                char c = alpha[i];
+                c2i[c] = i;
+                i2c[i] = c;
+            }
+            seq.clear();
+            seq.reserve(str.length());
+            for(int i=0; i<str.length(); i++) {
+                char c = str[i];
+                seq.push_back(c2i[c]);
+            }
         }
-        seq.clear();
-        seq.reserve(str.length());
-        for(int i=0; i<str.length(); i++) {
-            char c = str[i];
-            seq.push_back(c2i[c]);
+
+    template <typename T> 
+        void ins(Vec<T> &seq, int pos, int c) {
+            seq.insert(seq.begin() + pos, c);
         }
-    }
-
-    void ins(seq_t &seq, int pos, int c) {
-        seq.insert(seq.begin() + pos, c);
-    }
-    void del(seq_t &seq, int pos) {
-        seq.erase(seq.begin()+pos);
-    }
-    void sub(seq_t &seq, int pos, int c) {
-        seq[pos] = c;
-    }
-    void rand_op(seq_t &seq,int sig_len, dvect_t prob) {
-        assert(prob.size()==3);
-        std::discrete_distribution<int> distribution(prob.begin(), prob.end());
-        std::uniform_int_distribution<int> pos_dist(0,seq.size()-1), char_dist(0,sig_len-1);
-        int op = distribution(gen), pos = pos_dist(gen), c = char_dist(gen);
-        switch (op) {
-            case 0:  // ins   
-                ins(seq,pos,c);
-                break;
-            case 1: // del
-                del(seq,pos);
-                break;
-            case 2: // sub
-                sub(seq,pos,c);;
+    template <typename T> 
+        void del(Vec<T> &seq, int pos) {
+            seq.erase(seq.begin()+pos);
         }
-    }
-    void rand_ops(seq_t &seq, int sig_len, int num_ops, dvect_t prob ) {
-        for (int i=0; i<num_ops; i++ ) {
-            rand_op(seq,sig_len, prob);
+    template <typename T> 
+        void sub(Vec<T>  &seq, int pos, int c) {
+            seq[pos] = c;
         }
-    }
-
-    void rand_seq(seq_t &seq, int sig_len, int len) {
-        seq.clear();
-        seq.reserve(len);
-        std::uniform_int_distribution<int> rchar(0, sig_len-1);
-        for (int i=0 ; i<len; i++) {
-            seq.push_back(rchar(gen));
+    template <typename T> 
+        void rand_op(Vec<T> &seq,int sig_len, Vec<double> prob) {
+            assert(prob.size()==3);
+            std::discrete_distribution<int> distribution(prob.begin(), prob.end());
+            std::uniform_int_distribution<int> pos_dist(0,seq.size()-1), char_dist(0,sig_len-1);
+            int op = distribution(gen), pos = pos_dist(gen), c = char_dist(gen);
+            switch (op) {
+                case 0:  // ins   
+                    ins(seq,pos,c);
+                    break;
+                case 1: // del
+                    del(seq,pos);
+                    break;
+                case 2: // sub
+                    sub(seq,pos,c);;
+            }
         }
-    }
-
-    void gen_pairs(std::vector<seq_t> &seqs1, std::vector<seq_t> &seqs2, int len, int sig_len, int num_pairs ) {
-        std::uniform_int_distribution<int> num_ops(0, len);
-        seqs1 = std::vector<seq_t>(num_pairs);
-        seqs2 = std::vector<seq_t>(num_pairs);
-        for (int i=0; i<num_pairs; i++ ) {
-            rand_seq(seqs1[i], sig_len, len);
-            seqs2[i] = seqs1[i];
-            rand_ops(seqs2[i], sig_len, num_ops(gen), {1.0,1.0,1.0});
+    template <typename T> 
+        void rand_ops(Vec<T> &seq, int sig_len, int num_ops, Vec<double> prob ) {
+            for (int i=0; i<num_ops; i++ ) {
+                rand_op(seq,sig_len, prob);
+            }
         }
-    }
 
-    unsigned int edit_distance(const seq_t &s1, const seq_t & s2)
-    {
-        const std::size_t len1 = s1.size(), len2 = s2.size();
-        std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
-
-        d[0][0] = 0;
-        for(unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
-        for(unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
-
-        for(unsigned int i = 1; i <= len1; ++i)
-            for(unsigned int j = 1; j <= len2; ++j)
-                  d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, 
-                                d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
-        return d[len1][len2];
-    }
-
-
-    size_t read_tuple(const seq_t &seq, const  indices_t &ind, int base) {
-        size_t r = 0;
-        for (auto i : ind  ) { 
-            r = (r*base + seq[i]);
+    template <typename T> 
+        void rand_seq(Vec<T> &seq, int sig_len, int len) {
+            seq.clear();
+            seq.reserve(len);
+            std::uniform_int_distribution<int> rchar(0, sig_len-1);
+            for (int i=0 ; i<len; i++) {
+                seq.push_back(rchar(gen));
+            }
         }
-        return r;
-    }
-    bool inc_ind_sorted(indices_t &ind, int len ) {
+
+    template <typename T> 
+        void gen_pairs(Vec2D<T> &seqs1, Vec2D<T> &seqs2, int len, int sig_len, int num_pairs ) {
+            std::uniform_int_distribution<int> num_ops(0, len);
+            seqs1 = Vec2D<T>(num_pairs);
+            seqs2 = Vec2D<T>(num_pairs);
+            for (int i=0; i<num_pairs; i++ ) {
+                rand_seq(seqs1[i], sig_len, len);
+                seqs2[i] = seqs1[i];
+                rand_ops(seqs2[i], sig_len, num_ops(gen), {1.0,1.0,1.0});
+            }
+        }
+
+    template <typename T> 
+        unsigned int edit_distance(const Vec<T> &s1, const Vec<T> & s2)
+        {
+            const std::size_t len1 = s1.size(), len2 = s2.size();
+            std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
+
+            d[0][0] = 0;
+            for(unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
+            for(unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
+
+            for(unsigned int i = 1; i <= len1; ++i)
+                for(unsigned int j = 1; j <= len2; ++j)
+                    d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, 
+                            d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
+            return d[len1][len2];
+        }
+
+
+    template <typename T> 
+        size_t read_tuple(const Vec<T> &seq, const  Vec<size_t> &ind, int base) {
+            size_t r = 0;
+            for (auto i : ind  ) { 
+                r = (r*base + seq[i]);
+            }
+            return r;
+        }
+
+    bool inc_ind_sorted(Vec<size_t> &ind, int len ) {
         auto cur = ind.size()-1;
         while (ind[cur]  == len-1 - (ind.size()-1 - cur) ) {
             if (cur==0) {
@@ -131,26 +137,29 @@ struct string_tools_t {
         return true;
     }
 
-    void seq2kmer(seq_t &seq, ivect_t &kseq, int k, int sig_len ) {
-        kseq.clear();
-        kseq.reserve(seq.size());
-        for (int i=0; i<seq.size()-k+1; i++) {
-            int kid = 0;
-            for (int j=0; j<k; j++) {
-                kid = kid*sig_len + seq[i+j];
+    template <typename T1, typename T2> 
+        void seq2kmer(Vec<T1> &seq, Vec<T2> &kseq, int k, int sig_len ) {
+            kseq.clear();
+            kseq.reserve(seq.size());
+            for (int i=0; i<seq.size()-k+1; i++) {
+                int kid = 0;
+                for (int j=0; j<k; j++) {
+                    kid = kid*sig_len + seq[i+j];
+                }
+                kseq.push_back(kid);
             }
-            kseq.push_back(kid);
         }
-    }
 
-    
-    void gen_pairs(std::vector<seq_t> &seqs1, std::vector<seq_t> &seqs2, int num_pairs, const string_opts &ops) {
-       gen_pairs(seqs1,seqs2,ops.len, ops.sig_len, num_pairs); 
-    }
 
-    void seq2kmer(seq_t &seq, ivect_t  &kseq, const string_opts &ops) { 
-        seq2kmer(seq, kseq, ops.k_len, ops.sig_len);
-    }
+    template <typename T> 
+        void gen_pairs(Vec<T> &seqs1, Vec<T> &seqs2, int num_pairs, const string_opts &ops) {
+            gen_pairs(seqs1,seqs2,ops.len, ops.sig_len, num_pairs); 
+        }
+
+    template <typename T1, typename T2> 
+        void seq2kmer(Vec<T1> &seq, Vec<T2>  &kseq, const string_opts &ops) { 
+            seq2kmer(seq, kseq, ops.k_len, ops.sig_len);
+        }
 
 };
 

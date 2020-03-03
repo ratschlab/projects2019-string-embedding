@@ -5,26 +5,23 @@
 
 
 template<typename C1, typename C2> 
-struct tensor_embed_naive : public string_tools_t<C1,C2> {
+struct tensor_embed_naive : public string_tools_t {
 
-    typedef typename string_tools_t<C1,C2>::seq_t  seq_t;
-    typedef typename string_tools_t<C1,C2>::ivect_t  ivect_t;
-    typedef typename string_tools_t<C1,C2>::dvect_t  dvect_t;
-    typedef typename string_tools_t<C1,C2>::mat2d_int  mat2d_int;
-    typedef typename string_tools_t<C1,C2>::mat2d_double  mat2d_double;
-    typedef typename string_tools_t<C1,C2>::indices_t  indices_t;
     typedef std::string string; 
     std::default_random_engine gen;
     st_utils sut;
 
-    mat2d_double distribution;
-    mat2d_double proj_ideal;
+    template <typename T> 
+    using Vec = std::vector<T>; 
+    template <typename T> 
+    using Vec2D = std::vector<std::vector<T>>; 
 
+    Vec2D<C2> proj_ideal;
 
     void init_ideal(int sig_len, int t_len, int dim) {
         int tsize = pow(sig_len,t_len);
-        proj_ideal = mat2d_double(dim, dvect_t(tsize));
-        std::cauchy_distribution<double> cauchy(0,1);
+        proj_ideal = Vec2D<C2>(dim, Vec<C2>(tsize));
+        std::cauchy_distribution<C2> cauchy(0,1);
         for (int d=0; d<dim; d++) {
             for (int t=0; t<tsize; t++) {
                 proj_ideal[d][t] = cauchy(gen);
@@ -32,21 +29,23 @@ struct tensor_embed_naive : public string_tools_t<C1,C2> {
         }
     }
 
-    void embed_naive(const seq_t &seq, ivect_t  &T, int sig_len, int t_len) {
+    template <typename T1, typename T2>
+    void embed_naive(const Vec<T1> &seq, Vec<T2>  &T, int sig_len, int t_len) {
         int tsize = pow(sig_len,t_len);
-        T = ivect_t(tsize,0);
-        indices_t ind(t_len); 
+        T = Vec<T2>(tsize,0);
+        Vec<size_t> ind(t_len); 
         for (int i=0; i<t_len; i++) { 
             ind[i]=i;
         }
         do {
-            auto ti = string_tools_t<C1,C2>::read_tuple(seq,ind,sig_len);
+            auto ti = read_tuple(seq,ind,sig_len);
             assert(ti<T.size());
             T[ti]++;
-        } while (string_tools_t<C1,C2>::inc_ind_sorted(ind, seq.size()));
+        } while (inc_ind_sorted(ind, seq.size()));
     }
 
-    void sketch_ideal(const ivect_t &T, dvect_t &h, int num_bins, bool normalize) {
+    template <typename T1, typename T2> 
+    void sketch_ideal(const Vec<T1> &T, Vec<T2> &h, int num_bins, bool normalize) {
         int dim = proj_ideal.size();
         int tsize = proj_ideal[0].size();
         h.clear();
@@ -70,14 +69,16 @@ struct tensor_embed_naive : public string_tools_t<C1,C2> {
     tensor_embed_naive(const string_opts ops) : ops(ops) {}
 
 
-    void sketch_ideal(const ivect_t &seq, dvect_t &H ) {
+    template <typename T1, typename T2> 
+    void sketch_ideal(const Vec<T1> &seq, Vec<T2> &H ) {
         sketch_ideal(seq,H, ops.num_bins, ops.normalize);
     }
 
     void init_ideal() {
         init_ideal(ops.sig_len, ops.t_len, ops.dim) ;
     }
-    void embed_naive(const seq_t &seq, ivect_t &T) {
+    template <typename T1, typename T2> 
+    void embed_naive(const Vec<T1> &seq, Vec<T2> &T) {
         embed_naive(seq, T, ops.sig_len, ops.t_len);
     }
 };

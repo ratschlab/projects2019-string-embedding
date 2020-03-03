@@ -14,12 +14,14 @@
 
 
 struct test_unit { 
-        typedef tensor_embed<int,int> TE;
-        typedef tensor_embed_naive<int,int> TEN;
-        typedef string_tools_t<int,int> ST;
-        typedef TE::seq_t seq_t;
-        typedef TE::ivect_t ivect_t;
-        typedef TE::dvect_t dvect_t;
+        typedef tensor_embed<int,double> TE;
+        typedef tensor_embed_naive<int,double> TEN;
+        typedef string_tools_t ST;
+        template < class T> 
+        using Vec = std::vector<T>;
+        typedef Vec<int> seq_t;
+        typedef Vec<int> ivect_t;
+        typedef Vec<double> dvect_t;
     void test_pairs(std::string alpha, string_opts &opts) {
         string_opts org_opts(opts);
         int num = opts.num_exp;
@@ -30,7 +32,7 @@ struct test_unit {
         fconf << opts.get_config(1);
         std::cout << opts.get_config(0) ;
 
-        std::vector<seq_t> S1, S2;
+        Vec<seq_t> S1, S2;
         ST ss;
         TE st(opts);
         opts.sig_len = sut.pow(opts.sig_len ,opts.k_len);
