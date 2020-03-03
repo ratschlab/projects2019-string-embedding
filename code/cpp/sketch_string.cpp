@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <cstdlib>
-//#include "command_group.h"
 #include "st_utils.hpp"
 #include "tensor_embed.hpp"
 
