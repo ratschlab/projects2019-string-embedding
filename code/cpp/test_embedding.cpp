@@ -9,13 +9,13 @@
 #include <cstdlib>
 #include "st_utils.hpp"
 #include "string_options.hpp"
+#include "tensor_sketch.hpp"
 #include "tensor_embed.hpp"
-#include "tensor_embed_naive.hpp"
 
 
 struct test_unit { 
-        typedef tensor_embed<int,double> TE;
-        typedef tensor_embed_naive<int,double> TEN;
+        typedef tensor_sketch<int,double> TE;
+        typedef tensor_embed<int,double> TEN;
         typedef string_tools_t ST;
         template < class T> 
         using Vec = std::vector<T>;
@@ -25,7 +25,7 @@ struct test_unit {
     void test_pairs(std::string alpha, string_opts &opts) {
         string_opts org_opts(opts);
         int num = opts.num_exp;
-        st_utils sut;
+        st_utils sutil;
         std::ofstream  fout(opts.res_path), fconf(opts.conf_path);
         std::string sys_cmd = "mkdir -p " + opts.dir;
         std::system(sys_cmd.data());
@@ -35,7 +35,7 @@ struct test_unit {
         Vec<seq_t> S1, S2;
         ST ss;
         TE st(opts);
-        opts.sig_len = sut.pow(opts.sig_len ,opts.k_len);
+        opts.sig_len = sutil.pow(opts.sig_len ,opts.k_len);
         TE tt(opts);
         TEN ttn(opts);
         
@@ -62,9 +62,9 @@ struct test_unit {
             tt.sketch(s1,H1);
             tt.sketch(s2,H2);
 
-            auto tdiff = sut.L1_diff<int>(T1,T2);
-            auto hdiff = sut.median<double>(h1,h2);
-            auto Hdiff = sut.median<double>(H1,H2);
+            auto tdiff = sutil.L1_diff(T1,T2);
+            auto hdiff = sutil.median(h1,h2);
+            auto Hdiff = sutil.median(H1,H2);
             auto ed = ss.edit_distance(r1,r2);
             std::cout << ed << ",\t " << tdiff << ",\t " <<  
                 std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< "\n";
@@ -81,7 +81,6 @@ int main(int argc, char* argv[]) {
     test_unit tu;
     opts.read_args(argc,argv);
 
-//    int num = 100;
     std::string alpha = "acgt"; 
     tu.test_pairs(alpha, opts);
 
