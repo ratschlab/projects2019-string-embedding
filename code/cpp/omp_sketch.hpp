@@ -18,7 +18,8 @@ struct omp_sketch : public string_tools_t {
             for (int t=0; t<uniq_siglen; t++) {
                 rand_permute[d][t] = t;
             }
-            std::random_shuffle(rand_permute[d].begin(), rand_permute[d].end());
+            auto rng = std::default_random_engine {};
+            std::shuffle(rand_permute[d].begin(), rand_permute[d].end(), rng);
         }
     }
 
