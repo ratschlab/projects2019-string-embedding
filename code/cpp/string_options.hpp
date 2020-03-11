@@ -9,7 +9,7 @@
 #include "command_group.h"
 
 struct string_opts : public command_group {
-    int k_len = 4, t_len = 2, len = 100, sig_len = 4, dim = 50, num_bins = 5, disc = 8, num_exp = 100; 
+    int k_len = 4, t_len = 2, len = 100, sig_len = 4, dim = 50, num_bins = 5, disc = 8, num_exp = 100, verbose = 0; 
     bool normalize = false;
     string dir = "tmp", res_path = dir + "/res.txt", conf_path = dir+"/conf.txt", src;
 
@@ -25,6 +25,7 @@ void string_opts::add_options() {
     add_int(t_len,"-t","--tuple-size","number of elemtns in the tuple");
     add_int(len,"-l","--str-len","lenght of string to search");
     add_int(sig_len,"-S","--sigma-len","size of the alphabet");
+    add_int(verbose,"-v","--verbose","verbosity, 1: print sequences 0: only results");
     add_int(dim,"-m","--dim","dimension of sketching");
     add_int(num_bins,"-B","--num-bins","discretization for tensor sketching");
     add_int(num_exp,"-E","--num-exp","number of experiments or tests");

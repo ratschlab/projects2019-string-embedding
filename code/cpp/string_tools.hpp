@@ -10,19 +10,21 @@
 #include <assert.h>
 #include <map>
 #include "string_options.hpp"
+#include "st_utils.hpp"
 
-struct string_tools_t {
+struct string_tools_t : public st_utils {
     typedef std::string string; 
     template <typename T> 
         using Vec = std::vector<T>; 
     template <typename T> 
-        using Vec2D = std::vector<std::vector<T>>; 
+        using Vec2D = Vec<Vec<T>>; 
+    template <typename T> 
+        using Vec3D = Vec2D<Vec<T>>; 
     std::default_random_engine gen;
-    st_utils sutils;
 
 
     template <typename T>
-        void translate(string alpha, string &str, Vec<T> &seq) {
+        void translate(const string alpha, const string &str, Vec<T> &seq) {
             std::map<char,int> c2i;
             std::map<int,char> i2c;
             for (int i=0; i<alpha.size() ; i++) {
@@ -152,7 +154,6 @@ struct string_tools_t {
             }
         }
 
-
     template <typename T> 
         void gen_pairs(Vec<T> &seqs1, Vec<T> &seqs2, int num_pairs, const string_opts &ops) {
             gen_pairs(seqs1,seqs2,ops.len, ops.sig_len, num_pairs); 
@@ -162,6 +163,7 @@ struct string_tools_t {
         void seq2kmer(Vec<T1> &seq, Vec<T2>  &kseq, const string_opts &ops) { 
             seq2kmer(seq, kseq, ops.k_len, ops.sig_len);
         }
+
 
 };
 

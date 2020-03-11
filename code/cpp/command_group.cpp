@@ -72,11 +72,16 @@ command_group::string command_group::get_config(int __long ) {
         for (auto c : G) {
             sconf += c->to_string()+ "\n";
         }
-    } else {
+    } else if (__long == 0 )    {
         for (auto c : G) {
             sconf += c->S+","+c->L + ": " + c->sval() + ", ";
         }
         sconf += "\n"; 
+    }  else if (__long == -1 ) {
+        for (int argi = 0 ; argi<__argc; argi++  ) {
+            sconf += __argv[argi]  ;
+            sconf += " " ;
+        }
     }
     return sconf;
 }
@@ -133,15 +138,14 @@ void command_group::read_args(int argc, char* argv[]) {
             Cm->set(argv[++i]);
         }
     }
-    // save for deep copy default
+    // save in case 
     __argc = argc;
     __argv = (char**)argv;
 }
 
 
 void command_group::deep_copy(const command_group &cg ) {
-    read_args(cg.__argc, cg.__argv);
-    // override the changes
+    add_options();
     for (auto cp : cg.G ) {
         string key = cp->S;
         G[S[key]]->set(cp);

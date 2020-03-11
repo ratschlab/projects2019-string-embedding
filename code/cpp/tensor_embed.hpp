@@ -1,5 +1,6 @@
 
-#include "st_utils.hpp"
+#include <numeric>
+
 #include "string_options.hpp"
 #include "string_tools.hpp"
 
@@ -10,7 +11,7 @@ struct tensor_embed : public string_tools_t {
     Vec2D<C2> proj_ideal;
 
     void init_ideal(int sig_len, int t_len, int dim) {
-        int tsize = sutils.pow(sig_len,t_len);
+        int tsize = pow(sig_len,t_len);
         proj_ideal = Vec2D<C2>(dim, Vec<C2>(tsize));
         std::cauchy_distribution<C2> cauchy(0,1);
         for (int d=0; d<dim; d++) {
@@ -22,12 +23,10 @@ struct tensor_embed : public string_tools_t {
 
     template <typename T1, typename T2>
     void embed_naive(const Vec<T1> &seq, Vec<T2>  &T, int sig_len, int t_len) {
-        int tsize = sutils.pow(sig_len,t_len);
+        int tsize = pow(sig_len,t_len);
         T = Vec<T2>(tsize,0);
         Vec<size_t> ind(t_len); 
-        for (int i=0; i<t_len; i++) { 
-            ind[i]=i;
-        }
+        std::iota(ind.begin(), ind.end(), 0);
         do {
             auto ti = read_tuple(seq,ind,sig_len);
             assert(ti<T.size());
@@ -39,19 +38,17 @@ struct tensor_embed : public string_tools_t {
     void sketch_ideal(const Vec<T1> &T, Vec<T2> &h, int num_bins, bool normalize) {
         int dim = proj_ideal.size();
         int tsize = proj_ideal[0].size();
-        h.clear();
-        for (int i=0; i<dim; i++) {
-            double r = 0;
-            for (int ti=0; ti<T.size() ; ti++ ) {
-                r += proj_ideal[i][ti]*T[ti] ;
+        h = Vec<T2>(dim, 0);
+        for (size_t d=0; d<dim; d++) {
+            for (size_t i=0; i<T.size() ; i++ ) {
+                h[d] += proj_ideal[d][i]*T[i] ;
             }
-            h.push_back( r );
-            h[i] = h[i]/dim;
+            h[d] = h[d]/dim;
         }
         if (normalize) {
-            for (int i=0; i<dim; i++ ) { 
-                h[i] = h[i] / sutils.L1(T);
-                h[i] = h[i] * num_bins;
+            for (size_t d=0; d<dim; d++ ) { 
+                h[d] = h[d] / L1(T);
+                h[d] = h[d] * num_bins;
             }
         }
     }

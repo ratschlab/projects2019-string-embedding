@@ -11,13 +11,28 @@
 #include "string_options.hpp"
 #include "tensor_sketch.hpp"
 #include "tensor_embed.hpp"
+#include "omp_sketch.hpp"
 
 
-struct test_unit { 
-        template < class T> 
+struct test_unit : public string_tools_t { 
+    typedef Vec<int> seq_t;
+    template < class T> 
         using Vec = std::vector<T>;
-        typedef Vec<int> seq_t;
-    void test_pairs(std::string alpha, string_opts &opts) {
+    template <class T> 
+        using VecVec2D = Vec<Vec<T>>;
+    typedef std::string string;
+
+    template <class T> 
+    std::string seq2string(const Vec<T> &seq) {
+        std::string str = ""; 
+        for (auto s : seq ) {
+            str += (char)(s+'a');
+        }
+        return str;
+    }
+
+
+    void test_pairs(string_opts &opts) {
         string_opts org_opts(opts);
         int num = opts.num_exp;
         st_utils sutil;
@@ -28,22 +43,28 @@ struct test_unit {
         std::cout << opts.get_config(0) ;
 
         Vec<seq_t> S1, S2;
-        string_tools_t st;
-        opts.sig_len = sutil.pow(opts.sig_len ,opts.k_len);
+        gen_pairs(S1,S2,num, org_opts);
+        tensor_embed<int,double> st(opts);
+        opts.sig_len = pow(opts.sig_len ,opts.k_len);
         tensor_sketch<int,double> TS(opts);
         tensor_embed<int,double> TE(opts);
-        
+        opts.len = (int)(opts.len*1.5);
+        omp_sketch<int,int> OS(opts);
         TS.init_rand();
         TE.init_ideal();
+        OS.init_permute();
 
-        st.gen_pairs(S1,S2,num, org_opts);
 
-        auto header = "ed, \t td, \t hd, \t HD, \n";
-        std::cout << header;
+        std::string header = "";
+        if (opts.verbose) {
+            header += "seq1,\t seq2,\t";
+        }
+        header += "ed, \t td, \t hd, \t HD, OMD \n";
+        std::cout << "seq1,\t seq2,\t" << header;
         fout << header;
         for (int i=0; i<num; i ++ ){
             seq_t r1 = S1[i], r2 = S2[i]; 
-            Vec<int> s1, s2, T1, T2;
+            Vec<int> s1, s2, T1, T2, osk1, osk2;
             Vec<double> h1, h2, H1, H2;
 
             st.seq2kmer(r1,s1, org_opts);
@@ -55,16 +76,65 @@ struct test_unit {
             TE.sketch_ideal(T2,h2);
             TS.sketch(s1,H1);
             TS.sketch(s2,H2);
+            OS.sketch_join(s1, osk1);
+            OS.sketch_join(s2, osk2);
 
             auto tdiff = sutil.L1_diff(T1,T2);
+            auto omh_diff = sutil.hamming_diff(osk1,osk2);
             auto hdiff = sutil.median(h1,h2);
             auto Hdiff = sutil.median(H1,H2);
             auto ed = st.edit_distance(r1,r2);
-            std::cout << ed << ",\t " << tdiff << ",\t " <<  
-                std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< "\n";
-            fout << ed << ",\t " << tdiff << ",\t " <<  
-                std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< "\n";
+
+            std::string input_seqs = seq2string(r1) + "," + seq2string(r2) + ",";
+            std::string seq_out = "";
+            if (opts.verbose==1) {
+                seq_out += input_seqs;
+            }
+
+            std::cout << seq_out << ed << ",\t " << tdiff << ",\t " <<  
+                std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< ",\t " << omh_diff<< "\n";
+            fout << input_seqs << ed << ",\t " << tdiff << ",\t " <<  
+                std::setprecision(4) <<  hdiff<< ",\t " << std::setprecision(4) << Hdiff<< ",\t " << omh_diff << "\n";
         }
+    }
+
+    /* 
+       int k_len = 4, t_len = 2, len = 100, sig_len = 4, dim = 50, num_bins = 5, disc = 8, num_exp = 100; 
+       bool normalize = false;
+       string dir = "tmp", res_path = dir + "/res.txt", conf_path = dir+"/conf.txt", src;
+       */
+    string_opts make_conf() {
+        string_opts o;
+        o.k_len = 1; o.t_len = 2; o.len = 4; o.sig_len = 2; o.dim = 20; o.num_bins = 5;
+        o.disc = 8; o.num_exp = 100; o.normalize = false; 
+        return o;
+    }
+
+    void test_omp(string str1, string str2, string alpha) {
+        auto opts = make_conf();
+
+        int k = 2, sig_len = alpha.length(); 
+        Vec<int> seq1, seq2; 
+        Vec<int> kmer1, kmer2;
+        translate(alpha, str1, seq1);
+        translate(alpha, str2, seq2);
+        seq2kmer(seq1, kmer1, k , sig_len) ; 
+        seq2kmer(seq2, kmer2, k , sig_len) ; 
+        opts.len = 8;
+        opts.k_len = 1; 
+        opts.t_len = 2;
+        opts.sig_len = 2;
+        omp_sketch<int,int> omp_sk(opts);
+        omp_sk.init_permute();
+        Vec2D<int> osk1, osk2;
+        omp_sk.sketch(seq1, osk1);
+        omp_sk.sketch(seq2, osk2);
+        pseq(seq1, "seq1");
+        pseq(seq2, "seq2");
+        pseq(kmer1, "kmer1");
+        pseq(kmer2, "kmer2");
+        pmat(osk1, "osk1", true);
+        pmat(osk2, "osk2", true);
     }
 };
 
@@ -75,8 +145,12 @@ int main(int argc, char* argv[]) {
     test_unit tu;
     opts.read_args(argc,argv);
 
-    std::string alpha = "acgt"; 
-    tu.test_pairs(alpha, opts);
+    tu.test_pairs(opts);
+    /*
+    std::string alpha = "ab", str1, str2;
+    str1 = "baba"; str2 = "abaa";
+    tu.test_omp(str1, str2, alpha);
+    */
 
     return 0;
 }
