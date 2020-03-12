@@ -11,7 +11,8 @@
 struct string_opts : public command_group {
     int k_len = 4, t_len = 2, len = 100, sig_len = 4, dim = 50, num_bins = 5, disc = 8, num_exp = 100, verbose = 0; 
     bool normalize = false;
-    string dir = "tmp", res_path = dir + "/res.txt", conf_path = dir+"/conf.txt", src;
+    string proj_dir = "/Users/amirjoudaki/Codes/projects2019-string-embedding";
+    string dir = proj_dir + "/code/cpp/tmp", res_path = dir + "/res.txt", conf_path = dir+"/conf.txt", src;
 
     void add_options();
 

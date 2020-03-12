@@ -12,13 +12,13 @@ struct omp_sketch : public string_tools_t {
     Vec2D<C2> rand_permute;
 
     void init_permute(int sig_len, int len, int dim) {
+        auto rng = std::default_random_engine {};
         int uniq_siglen = (sig_len * len);
         rand_permute = Vec2D<C2>(dim, Vec<C2>(uniq_siglen));
         for (int d=0; d<dim; d++) {
             for (int t=0; t<uniq_siglen; t++) {
                 rand_permute[d][t] = t;
             }
-            auto rng = std::default_random_engine {};
             std::shuffle(rand_permute[d].begin(), rand_permute[d].end(), rng);
         }
     }
@@ -29,7 +29,6 @@ struct omp_sketch : public string_tools_t {
         size_t dim = rand_permute.size();
         size_t uniq_siglen = (sig_len * len);
         assert(rand_permute[0].size()>=uniq_siglen);
-//        T = Vec2D<C2>(dim, Vec<C2>());
         T = Vec2D<C2>(dim);
         for (size_t d=0; d<dim; d++) {
             Vec<size_t> counts(sig_len,0);
@@ -62,7 +61,7 @@ struct omp_sketch : public string_tools_t {
         T = Vec<C2>(dim, 0);
         for (size_t d=0; d<dim; d++ ) {
             for (size_t t=0; t<Tvec[d].size(); t++) {
-                T[d] += T[d]*uniq_siglen + Tvec[d][t];
+                T[d] = T[d]*uniq_siglen + Tvec[d][t];
             }
         }
     }

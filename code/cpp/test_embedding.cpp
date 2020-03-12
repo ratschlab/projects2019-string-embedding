@@ -3,9 +3,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
-#include <random>
 #include <algorithm>
-#include <assert.h>
 #include <cstdlib>
 #include "st_utils.hpp"
 #include "string_options.hpp"
@@ -24,7 +22,7 @@ struct test_unit : public string_tools_t {
 
     template <class T> 
     std::string seq2string(const Vec<T> &seq) {
-        std::string str = ""; 
+        std::string str("");
         for (auto s : seq ) {
             str += (char)(s+'a');
         }
@@ -37,6 +35,7 @@ struct test_unit : public string_tools_t {
         int num = opts.num_exp;
         st_utils sutil;
         std::ofstream  fout(opts.res_path), fconf(opts.conf_path);
+        \\TODO
         std::string sys_cmd = "mkdir -p " + opts.dir;
         std::system(sys_cmd.data());
         fconf << opts.get_config(1);
