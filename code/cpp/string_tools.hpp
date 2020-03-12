@@ -67,6 +67,7 @@ struct string_tools_t : public st_utils {
                     break;
                 case 2: // sub
                     sub(seq, pos, c);;
+                    break;
                 default:
                     exit(1);
             }

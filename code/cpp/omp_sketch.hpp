@@ -25,7 +25,7 @@ struct omp_sketch : public string_tools_t {
 
 
     void sketch(const Vec<C1> &seq, Vec2D<C2>  &T, int sig_len, int t_len) {
-        assert(t_len >= seq.size());
+        assert(t_len <= seq.size());
         size_t len = seq.size();
         size_t dim = rand_permute.size();
         size_t uniq_siglen = (sig_len * len);
