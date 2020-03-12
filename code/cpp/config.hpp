@@ -3,18 +3,21 @@
 #include <cstdlib>
 #include <ctime>
 #include <random>
+#include <utility>
+#include <utility>
 #include <vector>
 #include <fstream>
 #include <sys/stat.h>
 #include <algorithm>
 #include <map>
+
 using std::cout;
 using std::endl;
-using std::vector; 
+using std::vector;
 using std::string;
 
 
-int make_directory(std::string path) {
+int make_directory(const std::string &path) {
     int out = mkdir(path.c_str(), S_IRWXU);
     return out;
 }
@@ -45,7 +48,7 @@ class config {
                 string line;
                 while (std::getline(fc, line)) {
                     if ( line.find("PROJ_DIR") != std::string::npos) {
-                        project_dir = string(line.begin() + line.find("=") + 1, line.end());
+                        project_dir = string(line.begin() + line.find('=') + 1, line.end());
                         int c = 0;
                         while ( project_dir[c]==' ')
                             c ++;
@@ -61,19 +64,22 @@ class config {
                 std::cerr << " couldn't find PROJ_DIR in the config file " << std::endl;
                 exit(1);
             }
-            string fasta_file(int i) {
-                return data_path + "/seqs" + std::to_string(i) + ".fa";
-            }
-            string val_file(int i) {
-                return data_path + "/vals" + std::to_string(i) + ".bin";
-            } 
 
-            config(std::string file_name, std::string result_dir) : file_name(file_name) {
-                load_proj_dir();
-            }
-            config(std::string file_name) : file_name(file_name)  {
-                load_proj_dir();
-            }
+    string fasta_file(int i) {
+        return data_path + "/seqs" + std::to_string(i) + ".fa";
+    }
+
+    string val_file(int i) {
+        return data_path + "/vals" + std::to_string(i) + ".bin";
+    }
+
+    config(std::string file_name, const std::string &result_dir) : file_name(std::move(std::move(file_name))) {
+        load_proj_dir();
+    }
+
+    explicit config(std::string file_name) : file_name(std::move(file_name)) {
+        load_proj_dir();
+    }
 };
 
 

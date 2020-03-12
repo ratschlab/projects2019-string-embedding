@@ -25,15 +25,16 @@ struct omp_sketch : public string_tools_t {
 
 
     void sketch(const Vec<C1> &seq, Vec2D<C2>  &T, int sig_len, int t_len) {
+        assert(t_len >= seq.size());
         size_t len = seq.size();
         size_t dim = rand_permute.size();
         size_t uniq_siglen = (sig_len * len);
-        assert(rand_permute[0].size()>=uniq_siglen);
+        assert(rand_permute[0].size() >= uniq_siglen);
         T = Vec2D<C2>(dim);
-        for (size_t d=0; d<dim; d++) {
-            Vec<size_t> counts(sig_len,0);
-            Vec<std::tuple<C2, C1, size_t>> tup_vec;
-            for (size_t i=0; i<len; i++) {
+        for (size_t d = 0; d < dim; d++) {
+            Vec <size_t> counts(sig_len, 0);
+            Vec <std::tuple<C2, C1, size_t>> tup_vec;
+            for (size_t i = 0; i < len; i++) {
                 C1 Char = seq[i]; 
                 size_t Count = counts[Char];
                 size_t index = Char + Count*len; 
@@ -68,7 +69,8 @@ struct omp_sketch : public string_tools_t {
 
 
     string_opts ops;
-    omp_sketch(const string_opts ops) : ops(ops) {}
+
+    explicit omp_sketch(const string_opts &ops) : ops(ops) {}
 
     void init_permute() {
         init_permute(ops.sig_len, ops.len, ops.dim) ;

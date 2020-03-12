@@ -7,47 +7,47 @@
 #include <vector>
 #include <random>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <map>
 #include "string_options.hpp"
 #include "st_utils.hpp"
 
 struct string_tools_t : public st_utils {
-    typedef std::string string; 
-    template <typename T> 
-        using Vec = std::vector<T>; 
-    template <typename T> 
-        using Vec2D = Vec<Vec<T>>; 
-    template <typename T> 
-        using Vec3D = Vec2D<Vec<T>>; 
+    typedef std::string string;
+    template<typename T>
+    using Vec = std::vector<T>;
+    template<typename T>
+    using Vec2D = Vec<Vec<T>>;
+    template<typename T>
+    using Vec3D = Vec2D<Vec<T>>;
     std::default_random_engine gen;
 
 
-    template <typename T>
-        void translate(const string alpha, const string &str, Vec<T> &seq) {
-            std::map<char,int> c2i;
-            std::map<int,char> i2c;
-            for (int i=0; i<alpha.size() ; i++) {
-                char c = alpha[i];
-                c2i[c] = i;
-                i2c[i] = c;
-            }
-            seq.clear();
-            seq.reserve(str.length());
-            for(int i=0; i<str.length(); i++) {
-                char c = str[i];
-                seq.push_back(c2i[c]);
-            }
+    template<typename T>
+    void translate(const string &alpha, const string &str, Vec<T> &seq) {
+        std::map<char, T> c2i;
+        std::map<T, char> i2c;
+        for (int i = 0; i < alpha.size(); i++) {
+            char c = alpha[i];
+            c2i[c] = i;
+            i2c[i] = c;
         }
+        seq.clear();
+        seq.reserve(str.length());
+        for (char c : str) {
+            seq.push_back(c2i[c]);
+        }
+    }
 
-    template <typename T> 
-        void ins(Vec<T> &seq, int pos, int c) {
-            seq.insert(seq.begin() + pos, c);
-        }
-    template <typename T> 
-        void del(Vec<T> &seq, int pos) {
-            seq.erase(seq.begin()+pos);
-        }
+    template<typename T>
+    void ins(Vec<T> &seq, int pos, int c) {
+        seq.insert(seq.begin() + pos, c);
+    }
+
+    template<typename T>
+    void del(Vec<T> &seq, int pos) {
+        seq.erase(seq.begin() + pos);
+    }
     template <typename T> 
         void sub(Vec<T>  &seq, int pos, int c) {
             seq[pos] = c;
@@ -60,13 +60,15 @@ struct string_tools_t : public st_utils {
             int op = distribution(gen), pos = pos_dist(gen), c = char_dist(gen);
             switch (op) {
                 case 0:  // ins   
-                    ins(seq,pos,c);
+                    ins(seq, pos, c);
                     break;
                 case 1: // del
-                    del(seq,pos);
+                    del(seq, pos);
                     break;
                 case 2: // sub
-                    sub(seq,pos,c);;
+                    sub(seq, pos, c);;
+                default:
+                    exit(1);
             }
         }
 

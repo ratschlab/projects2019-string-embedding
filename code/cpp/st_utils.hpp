@@ -4,43 +4,46 @@
 #include <iostream> 
 #include <string> 
 
-struct st_utils { 
+struct st_utils {
 
-    template <class T>
-    void pseq(const std::vector<T> &seq, std::string name = "") {
-        if (name.size()>0) {
-            std::cout << name << " = " ;
+    template<class T>
+    void pseq(const std::vector<T> &seq, const std::string &name = "") {
+        if (!name.empty()) {
+            std::cout << name << " = ";
         }
-        for (auto s : seq ) { 
+        for (auto s : seq) {
             std::cout << s;
-        } std::cout << "\n";
+        }
+        std::cout << "\n";
     }
 
-    template <class T>
-    void pvec(const std::vector<T> &vec, std::string name = "") {
-        if (name.size()>0) {
-            std::cout << name << " = " ;
+    template<class T>
+    void pvec(const std::vector<T> &vec, const std::string &name = "") {
+        if (!name.empty()) {
+            std::cout << name << " = ";
         }
-        for (auto v : vec ) {
-            std::cout << v << " " ;
-        } std::cout << "\n";
+        for (auto v : vec) {
+            std::cout << v << " ";
+        }
+        std::cout << "\n";
     }
-    template <class T> 
-    void pmat(const std::vector<std::vector<T> > &mat, std::string name = "", bool tr = false) {
-        if (name.size()>0) {
-            std::cout << name << " = \n" ;
+
+    template<class T>
+    void pmat(const std::vector<std::vector<T> > &mat, const std::string &name = "", bool tr = false) {
+        if (!name.empty()) {
+            std::cout << name << " = \n";
         }
-        if (tr==false) {
-            for (auto row : mat ) {
-                for (auto e : row ) {
+        if (!tr) {
+            for (auto row : mat) {
+                for (auto e : row) {
                     std::cout << e << ", ";
                 }
                 std::cout << "\n";
             }
         } else { // transpose  
-            for (size_t i=0; i< mat[0].size(); i++  ) {
-                for (size_t j=0; j<mat.size(); j++) {
-                    std::cout << mat[j][i] << ", " ; 
+            for (size_t i = 0; i < mat[0].size(); i++) {
+                for (size_t j = 0; j < mat.size(); j++) {
+                    std::cout << mat[j][i] << ", ";
                 }
                 std::cout << "\n";
             }

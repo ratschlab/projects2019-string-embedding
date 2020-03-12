@@ -54,19 +54,23 @@ struct tensor_embed : public string_tools_t {
     }
 
     string_opts ops;
-    tensor_embed(const string_opts ops) : ops(ops) {}
+    explicit tensor_embed(const string_opts &ops);
 
 
-    template <typename T1, typename T2> 
-    void sketch_ideal(const Vec<T1> &seq, Vec<T2> &H ) {
-        sketch_ideal(seq,H, ops.num_bins, ops.normalize);
+    template<typename T1, typename T2>
+    void sketch_ideal(const Vec <T1> &seq, Vec <T2> &H) {
+        sketch_ideal(seq, H, ops.num_bins, ops.normalize);
     }
 
     void init_ideal() {
-        init_ideal(ops.sig_len, ops.t_len, ops.dim) ;
+        init_ideal(ops.sig_len, ops.t_len, ops.dim);
     }
-    template <typename T1, typename T2> 
-    void embed_naive(const Vec<T1> &seq, Vec<T2> &T) {
+
+    template<typename T1, typename T2>
+    void embed_naive(const Vec <T1> &seq, Vec <T2> &T) {
         embed_naive(seq, T, ops.sig_len, ops.t_len);
     }
 };
+
+template<typename C1, typename C2>
+tensor_embed<C1, C2>::tensor_embed(const string_opts &ops) : ops(ops) {}

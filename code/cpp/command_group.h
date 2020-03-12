@@ -20,24 +20,27 @@ struct command_group {
     int __argc; 
     char ** __argv;
 
-    void add(cmd_type *C) ;
+    void add(cmd_type *C);
 
-    void print_help() ;
+    void print_help();
 
-    string get_config(int __long = 0) ;
+    string get_config(int __long = 0);
 
-    cmd_type* read(string key) ;
+    cmd_type *read(const string &key);
 
     virtual void add_options() = 0;
-    
-    bool check_arg(string str, string name1, string name2) ;
 
-    void add_int(int &val, string sh, string lo, string m) ;
-    void add_str(string &val, string sh, string lo, string m) ;
-    void add_bool(bool &val, bool set, string sh, string lo, string m) ;
-    void read_args(int argc, char* argv[]) ;
+    bool check_arg(const string &str, const string &name1, const string &name2);
 
-    void deep_copy(const command_group &cg ) ;
+    void add_int(int &val, string sh, string lo, string m);
+
+    void add_str(string &val, string sh, string lo, string m);
+
+    void add_bool(bool &val, string sh, string lo, string m);
+
+    void read_args(int argc, char *argv[]);
+
+    void deep_copy(const command_group &cg);
 };
 
 

@@ -1,46 +1,77 @@
 #include "command_group.h"
 
+#include <utility>
+
 struct command_group::cmd_type {
     string S, L, H, sv;
-    void init(string S, string L, string H = "no description " ) {
-        this->S = S; this->L = L; this->H = H;
+
+    void init(string S, string L, string H = "no description ") {
+        this->S = std::move(S);
+        this->L = std::move(L);
+        this->H = std::move(H);
     }
+
     virtual bool getval() = 0;
+
     virtual void set(const cmd_type *cd) = 0;
-    virtual void set(string s) {};
-    virtual string sval() = 0; // type and value 
+
+    virtual void set(const string &s) {};
+
+    virtual string sval() = 0; // type and value
     virtual void set() {};
 
-    virtual string to_string () {
-        return  sval() + "\t" +  S + ",\t" + L + "\t" + H + "\n"; 
+    virtual string to_string() {
+        return sval() + "\t" + S + ",\t" + L + "\t" + H + "\n";
     }
 };
 
 struct command_group::cmd_type_int : public command_group::cmd_type {
     int &val;
-    cmd_type_int(int &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
-    void set(string sval) { val = std::stoi(sval); }
-    void set(const cmd_type *cd) { val = ((cmd_type_int*)cd)->val; }
-    string sval() { return std::to_string(val) + "(int)"; }
-    bool getval() { return true;} 
+
+    cmd_type_int(int &v, string S, string L, string H) : val(v) {
+        this->init(std::move(S), std::move(L), std::move(H));
+    }
+
+    void set(const string &sval) override { val = std::stoi(sval); }
+
+    void set(const cmd_type *cd) override { val = ((cmd_type_int *) cd)->val; }
+
+    string sval() override { return std::to_string(val) + "(int)"; }
+
+    bool getval() override { return true; }
 };
 
 struct command_group::cmd_type_str : public command_group::cmd_type {
     string &val;
-    cmd_type_str(string &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
-    void set(string sval) { val = sval; }
-    void set(const cmd_type *cd) { val = ((cmd_type_str*)cd)->val; }
-    string sval() { return val + "(str)"; }
-    bool getval() { return true;} 
+
+    cmd_type_str(string &v, string S, string L, string H) : val(v) {
+        this->init(std::move(S), std::move(L), std::move(H));
+    }
+
+    void set(const string &sval) override { val = sval; }
+
+    void set(const cmd_type *cd) override { val = ((cmd_type_str *) cd)->val; }
+
+    string sval() override { return val + "(str)"; }
+
+    bool getval() override { return true; }
 };
 
 struct command_group::cmd_type_bool : public command_group::cmd_type {
-    bool &val; bool to;
-    cmd_type_bool(bool &v, string S, string L, string H ) : val (v){ this->init(S,L,H); }
-    bool getval() { return false;} 
-    string sval() { return std::to_string(val) + "(bool)"; }
-    void set(const cmd_type *cd) { val = ((cmd_type_bool*)cd)->val; }
-    void set() { val = to; }
+    bool &val;
+    bool to{};
+
+    cmd_type_bool(bool &v, string S, string L, string H) : val(v) {
+        this->init(std::move(S), std::move(L), std::move(H));
+    }
+
+    bool getval() override { return false; }
+
+    string sval() override { return std::to_string(val) + "(bool)"; }
+
+    void set(const cmd_type *cd) override { val = ((cmd_type_bool *) cd)->val; }
+
+    void set() override { val = to; }
 };
 
 
@@ -86,53 +117,56 @@ command_group::string command_group::get_config(int __long ) {
     return sconf;
 }
 
-command_group::cmd_type* command_group::read(string key) {
-    cmd_type* Cp;
+command_group::cmd_type *command_group::read(const string &key) {
+    cmd_type *Cp;
 
-    if ( S.count(key)==0 and L.count(key)==0) {
-        std::cerr << "option (" << key << ") is not a valid argument " << std::endl; 
-        return 0;
-    } else if (S.count(key)>0) { 
-        Cp = G[S[key]];  
-    } else { 
-        Cp = G[L[key]]; 
-    } 
+    if (S.count(key) == 0 and L.count(key) == 0) {
+        std::cerr << "option (" << key << ") is not a valid argument " << std::endl;
+        return nullptr;
+    } else if (S.count(key) > 0) {
+        Cp = G[S[key]];
+    } else {
+        Cp = G[L[key]];
+    }
     return Cp;
 }
 
 
-bool command_group::check_arg(string str, string name1, string name2) {
-    if (name1.compare(str)==0 or name2.compare(str)==0)
+bool command_group::check_arg(const string &str, const string &name1, const string &name2) {
+    if (name1 == str or name2 == str)
         return true;
     else
         return false;
 }
 
 void command_group::add_int(int &val, string sh, string lo, string m) {
-    add(new cmd_type_int(val,sh,lo,m));
-}
-void command_group::add_str(string &val, string sh, string lo, string m) {
-    add(new cmd_type_str(val,sh,lo,m));
-}
-void command_group::add_bool(bool &val, bool set, string sh, string lo, string m) {
-    add(new cmd_type_bool(val, sh, lo, m));
+    add(new cmd_type_int(val, std::move(sh), std::move(lo), std::move(m)));
 }
 
-void command_group::read_args(int argc, char* argv[]) {
+void command_group::add_str(string &val, string sh, string lo, string m) {
+    add(new cmd_type_str(val, std::move(sh), std::move(lo), std::move(m)));
+}
+
+void command_group::add_bool(bool &val, string sh, string lo, string m) {
+    add(new cmd_type_bool(val, std::move(sh), std::move(lo), std::move(m)));
+}
+
+void command_group::read_args(int argc, char *argv[]) {
     add_options();
 
-    for (int i=1; i<argc; i++) {
-        string cmd_name(argv[i]); 
-        if (check_arg(cmd_name,"-h","--help")) {
+    for (int i = 1; i < argc; i++) {
+        string cmd_name(argv[i]);
+        if (check_arg(cmd_name, "-h", "--help")) {
             print_help();
             exit(0);
         }
         cmd_type *Cm = read(cmd_name);
-        if (Cm==0) {
+        if (Cm == nullptr) {
             continue;
-        } if  (not Cm->getval()) { 
+        }
+        if (not Cm->getval()) {
             Cm->set();
-        } else if (i==(argc-1) ) {
+        } else if (i == (argc - 1)) {
             std::cerr << "Command (" << cmd_name << ") requires a value " << std::endl;
         } else {
             Cm->set(argv[++i]);

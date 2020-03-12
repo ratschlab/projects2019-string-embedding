@@ -3,40 +3,35 @@
 #include <cstdlib>
 #include <ctime>
 #include <random>
+#include <utility>
 #include <vector>
-#include <fstream>
-#include <sys/stat.h>
 #include <algorithm>
 #include <map>
 #include <sstream>
 #include "config.hpp"
-using std::cout;
-using std::endl;
-using std::vector; 
-using std::string;
-
 
 
 struct seq_options {
-    bool check_arg(char* str, string name1, string name2) {
-        if (name1.compare(str)==0 or name2.compare(str)==0)
+    bool check_arg(char *str, const string &name1, const string &name2) {
+        if (name1 == str or name2 == str)
             return true;
         else
             return false;
-        }
+    }
+
 public:
     double mutation_rate = .1, reverse_p = 0, geometric_p = .4;
-    int gene_len = 100, gene_len2 = -1 , num_genes = 5, 
-        padding = 200, num_seq = 5, num_seq2 = -1,repeat = 2;
+    int gene_len = 100, gene_len2 = -1, num_genes = 5,
+            padding = 200, num_seq = 5, num_seq2 = -1, repeat = 2;
     bool colored = false, print_values = false, print_seqs = false;
     string file_name = "tmp";
-    
 
-    void read_args(int argc, char* argv[]) {
+
+    void read_args(int argc, char *argv[]) {
         using std::stoi;
         using std::stof;
-        for (int i=1; i<argc; i++) {
-            if (check_arg(argv[i],"-m", "--mutation-rate")) {
+        for (int i = 1; i < argc; i++) {
+            if (check_arg(argv[i], "-m", "--mutation-rate")) {
                 mutation_rate = stof(argv[++i]);
             } else  
             if (check_arg(argv[i],"-g", "--gene-len")) {
@@ -143,7 +138,7 @@ void rand_seq(vector<char> &seq, string Sigma, int len) {
 vector<char> rand_seq(string Sigma, int len) {
     vector<char> vec;
     vec.reserve(len);
-    rand_seq(vec, Sigma, len);
+    rand_seq(vec, std::move(Sigma), len);
     return vec;
 }
 
@@ -194,12 +189,13 @@ int  mutate_seq(vector<char> &seq, vector<int> &val, vector<char> &seq2, vector<
 }
 
 
-
 struct gene_interval {
 public:
-    int gene_code, begin, end, seq_num;
-    gene_interval(int g, int b, int e , int sn) : gene_code(g), begin(b), end(e), seq_num(sn) {}
-    gene_interval() {}
+    int gene_code{}, begin{}, end{}, seq_num{};
+
+    gene_interval(int g, int b, int e, int sn) : gene_code(g), begin(b), end(e), seq_num(sn) {}
+
+    gene_interval() = default;
 };
 
 
@@ -239,7 +235,7 @@ string generate_seqs(vector<vector<char> >  &seqs,
                     gene_len = mutate_seq(genes[k], gene_vals[k],  seq, val,  opt, Sigma); 
                 }
                 int end = seq.size();
-                gene_interval_vec.push_back(gene_interval(gene_code, begin, end, seq_num));
+                gene_interval_vec.emplace_back(gene_code, begin, end, seq_num);
                 rand_seq(seq, Sigma, opt.padding);
                 val.insert(val.end(), opt.padding, 0); 
 
@@ -247,22 +243,22 @@ string generate_seqs(vector<vector<char> >  &seqs,
             seqs.push_back(seq);
             vals.push_back(val);
             all_intervals.push_back(gene_interval_vec);
-            seq_num ++;
+            seq_num++;
         }
 
     }
 
     // serilize optioins
     std::stringstream ss;
-    ss << "num_seqs: "; 
-    for (int i=0; i<num_seqs.size(); i++)
-        ss << num_seqs[i] << " ";
-    ss << endl << "gene_lens: "; 
-    for (int i=0; i<gene_lens.size(); i++)
-        ss << gene_lens[i] << " ";
+    ss << "num_seqs: ";
+    for (int num_seq : num_seqs)
+        ss << num_seq << " ";
+    ss << endl << "gene_lens: ";
+    for (int gene_len : gene_lens)
+        ss << gene_len << " ";
     ss << endl << "seq_lens: ";
-    for (int i=0; i<seqs.size(); i++)
-        ss << seqs[i].size() << " ";
+    for (auto &seq : seqs)
+        ss << seq.size() << " ";
     return ss.str();
 }
 
@@ -278,30 +274,30 @@ public:
                 vector< vector< gene_interval> > &intervals, 
                 std::ofstream &fmaf ) 
                        : seqs(seqs), vals(vals), intervals(intervals), fmaf(fmaf) {
-         int N = intervals.size(); 
-         for (auto seq_intervals : intervals) {
-             for (auto Inter : seq_intervals) {
-                 int gc = Inter.gene_code;
-                 if (map.count(gc)==0) 
-                     map[gc] = vector< gene_interval > ();
-                 map[gc].push_back( Inter );
-             }
-         }
+        int N = intervals.size();
+        for (const auto &seq_intervals : intervals) {
+            for (auto Inter : seq_intervals) {
+                int gc = Inter.gene_code;
+                if (map.count(gc) == 0)
+                    map[gc] = vector<gene_interval>();
+                map[gc].push_back(Inter);
+            }
+        }
 
-         int count = 0;
-         fmaf << " ##maf   score = zero "  << endl;
-         for (auto it : map ) {
+        int count = 0;
+        fmaf << " ##maf   score = zero " << endl;
+        for (const auto &it : map) {
             int gc = it.first;
-            fmaf << "a " << count << " score = 0 "  << " g " << gc << endl;
-            for (auto Inter : it.second ) {
+            fmaf << "a " << count << " score = 0 " << " g " << gc << endl;
+            for (auto Inter : it.second) {
                 int sn = Inter.seq_num, b = Inter.begin, e = Inter.end;
 
-                std::string str ( seqs[sn].begin()+b, seqs[sn].begin()+e);
-                fmaf << "s seq" << sn << " " << b << " + " << (e-b) 
-                    << "    " << str << endl;
+                std::string str(seqs[sn].begin() + b, seqs[sn].begin() + e);
+                fmaf << "s seq" << sn << " " << b << " + " << (e - b)
+                     << "    " << str << endl;
             }
             count++;
-         }
+        }
     } 
 };
 
