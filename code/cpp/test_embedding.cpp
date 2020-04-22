@@ -17,7 +17,7 @@ struct test_unit : public string_tools_t {
     template<class T>
     using Vec = std::vector<T>;
     template<class T>
-    using VecVec2D = Vec<Vec<T>>;
+    using Vec2D = Vec<Vec<T>>;
     typedef std::string string;
 
     template<class T>
