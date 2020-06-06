@@ -1,5 +1,7 @@
 import numpy as np
-import utility 
+# import utility
+from python import utility
+
 PROJ_DIR = utility.proj_dir()
 
 
