@@ -1,5 +1,5 @@
 # projects2019-string-embedding
-This project implements the fast sequence embedding based on tensor sketching. Here is a priliminary result comparing this method (upper plots) to ordered min-hash (lower plots):
+This project implements a fast sequence similarity sketching, with experiments to compare it against min-hash and ordered min-hash. Here is a priliminary result comparing this method (upper plots) to ordered min-hash (lower plots):
 ![The main result](https://github.com/ratschlab/projects2019-string-embedding/blob/master/result.png)
 
 ## organization
